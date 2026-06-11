@@ -139,7 +139,6 @@ function PostCard({ post, large = false }) {
         <img src={post.img} alt={post.title}
           className="w-full h-full object-cover"
           style={{ transform: hov ? 'scale(1.06)' : 'scale(1)', transition: 'transform .6s ease' }}
-          loading="lazy"
         />
         <div className="absolute inset-0 pointer-events-none" style={{
           background: hov

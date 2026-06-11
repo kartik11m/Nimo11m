@@ -47,7 +47,6 @@ function MosaicCell({ photo, layout, chapterColor, chapterRgb, index, total, onC
           transform:  hov ? 'scale(1.06)' : 'scale(1)',
           transition: 'transform .6s cubic-bezier(.23,1,.32,1)',
         }}
-        loading="lazy"
       />
 
       {/* Dark scrim — fades out on hover to reveal photo */}

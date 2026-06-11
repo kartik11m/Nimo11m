@@ -147,7 +147,6 @@ function FeaturedCard({ post }) {
             transform: hov ? 'scale(1.06)' : 'scale(1)',
             transition: 'transform .6s cubic-bezier(.23,1,.32,1)',
           }}
-          loading="lazy"
         />
         <div className="absolute inset-0 pointer-events-none" style={{
           background: hov
@@ -251,7 +250,6 @@ function MiniCard({ post }) {
             transform: hov ? 'scale(1.08)' : 'scale(1)',
             transition: 'transform .5s ease',
           }}
-          loading="lazy"
         />
         <div className="absolute inset-0" style={{
           background: `rgba(${post.rgb},.12)`,

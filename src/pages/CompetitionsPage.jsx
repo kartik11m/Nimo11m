@@ -457,7 +457,7 @@ function AchievementCard({ ach, color, rgb }) {
           <img src={ach.img} alt={ach.project}
             className="w-full h-full object-cover"
             style={{ transform: hov ? 'scale(1.05)' : 'scale(1)', transition: 'transform .6s ease' }}
-            loading="lazy" />
+          />
           <div className="absolute inset-0 pointer-events-none" style={{
             background: 'linear-gradient(to top,rgba(5,5,8,.9) 0%,transparent 55%)',
           }} />
@@ -587,7 +587,7 @@ function PhotoStrip({ photos, color, rgb }) {
               <img src={photo.src} alt={photo.caption}
                 className="w-full h-full object-cover"
                 style={{ transform: hov ? 'scale(1.08)' : 'scale(1)', transition: 'transform .5s ease' }}
-                loading="lazy" />
+              />
               <div className="absolute inset-0 pointer-events-none"
                 style={{ background: hov ? 'linear-gradient(to top,rgba(5,5,8,.8) 0%,transparent 60%)' : 'rgba(5,5,8,.25)' }} />
               <div className="absolute top-0 left-0 right-0 h-[1.5px]"
