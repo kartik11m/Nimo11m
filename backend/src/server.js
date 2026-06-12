@@ -17,7 +17,14 @@ app.use(express.urlencoded({ extended: true }))
 
 // ── Database Connection ───────────────────────────────────────
 const connectDB = require('./config/database')
+const initializeOwner = require('./utils/initializeOwner')
+
 connectDB()
+
+// ── Initialize Owner Account ──────────────────────────────────
+setTimeout(() => {
+  initializeOwner()
+}, 1000)
 
 // ── API Routes ────────────────────────────────────────────────
 app.use('/api', require('./routes/index'))

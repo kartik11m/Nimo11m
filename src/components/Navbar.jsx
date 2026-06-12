@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
+import { useOwnerAuth } from '../context/OwnerAuthContext'
 
 const links = [
   { label: 'About',    to: '/about'    },
@@ -14,6 +15,7 @@ const links = [
 export default function Navbar() {
   const [open, setOpen] = useState(false)
   const { pathname } = useLocation()
+  const { isOwner, logout } = useOwnerAuth()
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-[100] flex items-center justify-between
@@ -38,13 +40,30 @@ export default function Navbar() {
         ))}
       </ul>
 
-      {/* Book button */}
-      <Link to="/book"
-        className="hidden md:block font-mono text-[10px] tracking-[3px] uppercase
-          border border-cyan/40 text-cyan px-5 py-2.5 no-underline
-          hover:bg-cyan hover:text-bg transition-all duration-300">
-        Book Now
-      </Link>
+      {/* Book button + Owner button */}
+      <div className="hidden md:flex gap-4 items-center">
+        <Link to="/book"
+          className="font-mono text-[10px] tracking-[3px] uppercase
+            border border-cyan/40 text-cyan px-5 py-2.5 no-underline
+            hover:bg-cyan hover:text-bg transition-all duration-300">
+          Book Now
+        </Link>
+        {isOwner ? (
+          <button onClick={logout}
+            className="font-mono text-[10px] tracking-[3px] uppercase
+              border border-[#FF6B35]/40 text-[#FF6B35] px-5 py-2.5
+              hover:bg-[#FF6B35] hover:text-bg transition-all duration-300 bg-transparent cursor-pointer">
+            Logout
+          </button>
+        ) : (
+          <Link to="/owner-login"
+            className="font-mono text-[10px] tracking-[3px] uppercase
+              border border-[#FF6B35]/40 text-[#FF6B35] px-5 py-2.5 no-underline
+              hover:bg-[#FF6B35] hover:text-bg transition-all duration-300">
+            Owner Login
+          </Link>
+        )}
+      </div>
 
       {/* Mobile hamburger */}
       <button className="md:hidden flex flex-col gap-[5px] cursor-pointer bg-transparent border-none p-0"

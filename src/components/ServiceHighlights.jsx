@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import EditableText from './EditableText';
 
 const syne      = { fontFamily: "'Syne', sans-serif" };
 const bebasNeue = { fontFamily: "'Bebas Neue', cursive" };
@@ -46,6 +47,7 @@ const services = [
 function ServiceCard({ s, i, active, onToggle }) {
   const shellRef  = useRef(null);
   const cardRef   = useRef(null);
+  const detailRef = useRef(null);
   const rafRef    = useRef(null);
   const stateRef  = useRef({
     currentRX: 0, currentRY: 0,
@@ -59,6 +61,7 @@ function ServiceCard({ s, i, active, onToggle }) {
   const [shadow,   setShadow]   = useState("");
   const [border,   setBorder]   = useState("rgba(255,255,255,.07)");
   const [lit,      setLit]      = useState(false);
+  const [detailHeight, setDetailHeight] = useState(0);
 
   const lerp = (a, b, t) => a + (b - a) * t;
 
@@ -141,6 +144,33 @@ function ServiceCard({ s, i, active, onToggle }) {
     }
   }, [active, s.accent]);
 
+  // Measure detail content height when card becomes active or content changes
+  useEffect(() => {
+    if (active && detailRef.current) {
+      // Use MutationObserver to watch for content changes and update height in real-time
+      const updateHeight = () => {
+        if (detailRef.current) {
+          setDetailHeight(detailRef.current.scrollHeight);
+        }
+      };
+
+      // Initial measurement
+      updateHeight();
+
+      // Watch for any changes to the detail content
+      const observer = new MutationObserver(updateHeight);
+      observer.observe(detailRef.current, {
+        childList: true,
+        subtree: true,
+        characterData: true,
+      });
+
+      return () => observer.disconnect();
+    } else if (!active) {
+      setDetailHeight(0);
+    }
+  }, [active]);
+
   useEffect(() => () => cancelAnimationFrame(rafRef.current), []);
 
   return (
@@ -177,7 +207,8 @@ function ServiceCard({ s, i, active, onToggle }) {
             backdropFilter: "blur(16px)",
             boxShadow:      shadow,
             padding:        "28px",
-            overflow:       "hidden",
+            overflow:       "auto",
+            maxHeight:      "80vh",
             transition:     "background .3s ease, border-color .3s ease, box-shadow .3s ease",
           }}
         >
@@ -240,19 +271,26 @@ function ServiceCard({ s, i, active, onToggle }) {
               transition: "color .3s ease",
             }}
           >
-            {s.description}
+            <EditableText contentId={`services.card${i}.description`} accent={s.accent}>
+              {s.description}
+            </EditableText>
           </p>
 
           {/* Expandable detail */}
-          <div style={{
-            maxHeight:  active ? "120px" : "0",
+          <div 
+            ref={detailRef}
+            onClick={(e) => e.stopPropagation()}
+            style={{
+            maxHeight:  active ? `${detailHeight}px` : "0",
             opacity:    active ? 1 : 0,
             overflow:   "hidden",
             transition: "max-height .4s cubic-bezier(.16,1,.3,1), opacity .3s ease",
           }}>
             <div className="h-px bg-white/[.07] my-3.5" />
             <p className="text-[12px] font-light leading-[1.7] text-[#F0EAD6]/50" style={dmSans}>
-              {s.detail}
+              <EditableText contentId={`services.card${i}.detail`} accent={s.accent}>
+                {s.detail}
+              </EditableText>
             </p>
           </div>
 
@@ -383,8 +421,10 @@ export default function ServiceHighlights() {
               color: "rgba(255,255,255,.45)",
               letterSpacing: ".02em",
             }}>
-            We help institutions book the right program, register students for events,
-            and promote summer camps with high-energy hands-on sessions.
+            <EditableText contentId="services.workshops.description">
+              We help institutions book the right program, register students for events,
+              and promote summer camps with high-energy hands-on sessions.
+            </EditableText>
           </p>
         </div>
 
