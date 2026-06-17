@@ -4,13 +4,24 @@ import { useOwnerAuth } from '../context/OwnerAuthContext'
 const dmSans = { fontFamily: "'DM Sans', sans-serif" }
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
-export default function EditableText({ contentId, children, className = '', accent = '#FF6B35' }) {
+export default function EditableText({ contentId, children, className = '', accent = '#FF6B35', textColor = 'rgba(255,255,255,.45)', hasGradient = false }) {
   const { isOwner, updateContent } = useOwnerAuth()
   const [isEditing, setIsEditing] = useState(false)
   const [displayText, setDisplayText] = useState(children)
   const [editValue, setEditValue] = useState(children)
   const [saving, setSaving] = useState(false)
   const textareaRef = useRef(null)
+
+  // Get background color matching text color with reduced opacity
+  const getEditBoxBackground = () => {
+    if (textColor.startsWith('#')) {
+      return `${textColor}15` // Hex with 15% opacity
+    } else if (textColor.includes('rgba')) {
+      // For rgba colors, reduce opacity to 0.1
+      return textColor.replace(/rgba\(([^,]+),\s*([^,]+),\s*([^,]+),\s*[\d.]+\)/, 'rgba($1, $2, $3, 0.1)')
+    }
+    return `${textColor}15`
+  }
 
   // Fetch content from database on mount
   useEffect(() => {
@@ -72,42 +83,82 @@ export default function EditableText({ contentId, children, className = '', acce
 
   if (isOwner && isEditing) {
     return (
-      <div className="relative w-full">
+      <div className="relative w-full" style={{ 
+        display: 'block', 
+        WebkitTextFillColor: 'unset',
+        backgroundClip: 'unset',
+        WebkitBackgroundClip: 'unset',
+        filter: 'none'
+      }}>
         <textarea
           ref={textareaRef}
           value={editValue}
           onChange={handleTextChange}
-          className="w-full px-3 py-2 rounded text-white focus:outline-none resize-none"
+          className="w-full px-3 py-2 rounded focus:outline-none resize-none"
           style={{
             ...dmSans,
-            backgroundColor: `${accent}20`,
-            borderColor: accent,
+            color: textColor,
+            backgroundColor: getEditBoxBackground(),
+            borderColor: textColor,
             borderWidth: '1px',
             minHeight: '60px',
             maxHeight: '300px',
             overflow: 'auto',
+            display: 'block',
+            WebkitTextFillColor: 'unset',
+            backgroundClip: 'unset',
+            WebkitBackgroundClip: 'unset',
+            filter: 'none'
           }}
           autoFocus
         />
-        <div className="flex gap-2 mt-3">
+        <div className="flex gap-3 mt-4 flex-wrap" style={{ position: 'relative', zIndex: 50, gap: '12px' }}>
           <button
             onClick={handleSave}
             disabled={saving}
-            className="px-3 py-1 rounded text-white text-sm font-bold disabled:opacity-50 hover:opacity-90"
             style={{
-              backgroundColor: accent,
+              backgroundColor: textColor,
+              border: `2px solid ${textColor}`,
+              boxShadow: `0 0 12px ${textColor.startsWith('#') ? textColor + '40' : textColor.replace(/[\d.]+\)/, '0.25)')}`,
+              fontSize: '14px',
+              fontWeight: 'bold',
+              color: '#ffffff',
+              padding: '10px 20px',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              opacity: saving ? 0.6 : 1,
+              display: 'inline-block',
+              whiteSpace: 'nowrap'
             }}
+            onMouseEnter={(e) => !saving && (e.target.style.filter = 'brightness(1.2)')}
+            onMouseLeave={(e) => (e.target.style.filter = 'brightness(1)')}
           >
-            {saving ? 'Saving...' : 'Save'}
+            {saving ? 'Saving...' : '✓ Save'}
           </button>
           <button
             onClick={() => {
               setEditValue(displayText)
               setIsEditing(false)
             }}
-            className="px-3 py-1 rounded bg-white/10 hover:bg-white/20 text-white text-sm font-bold"
+            style={{
+              backgroundColor: 'rgba(255,255,255,.08)',
+              border: '2px solid rgba(255,255,255,.25)',
+              boxShadow: '0 0 12px rgba(255,255,255,.08)',
+              fontSize: '14px',
+              fontWeight: 'bold',
+              color: '#ffffff',
+              padding: '10px 20px',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              display: 'inline-block',
+              whiteSpace: 'nowrap'
+            }}
+            onMouseEnter={(e) => (e.target.style.backgroundColor = 'rgba(255,255,255,.12)')}
+            onMouseLeave={(e) => (e.target.style.backgroundColor = 'rgba(255,255,255,.08)')}
           >
-            Cancel
+            ✕ Cancel
           </button>
         </div>
       </div>
@@ -118,8 +169,23 @@ export default function EditableText({ contentId, children, className = '', acce
     <span
       onClick={() => isOwner && setIsEditing(true)}
       className={`${isOwner ? 'cursor-pointer hover:bg-white/5 px-1 rounded transition-colors' : ''} ${className}`}
+      style={{ display: 'inline' }}
     >
-      {displayText}
+      {hasGradient ? (
+        <span
+          style={{
+            background: `linear-gradient(90deg,#FF6230,#E0357A)`,
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor:  "transparent",
+            backgroundClip:       "text",
+            display: 'inline-block'
+          }}
+        >
+          {displayText}
+        </span>
+      ) : (
+        displayText
+      )}
     </span>
   )
 }
