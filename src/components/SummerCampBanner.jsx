@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import EditableText from './EditableText';
+import { useOwnerAuth } from '../context/OwnerAuthContext';
 
 // ── Cinematic theme fonts (matching Beyond The Horizon) ──────────
 const bebasNeue  = { fontFamily: "'Bebas Neue', cursive" };
@@ -14,8 +16,8 @@ const C = {
   cyan:   "#00DFFF",
 };
 
-// ── Data ─────────────────────────────────────────────────────────
-const CAMP_DATE = new Date("2025-06-02T09:00:00");
+// ── Default camp date (fallback) ──────────────────────────────────
+const DEFAULT_CAMP_DATE = "2025-06-02T09:00:00";
 
 const rows = [
   { icon: "📅", label: "Date",      value: "June 2 – 6, 2025"        },
@@ -39,10 +41,11 @@ const techBadges = [
   { label: "Line Following",     color: C.pink   },
 ];
 
-// ── Countdown hook ────────────────────────────────────────────────
-function useCountdown(target) {
+// ── Countdown hook (accepts date string to avoid dependency issues) ────────
+function useCountdown(dateString) {
   const calc = () => {
-    const diff = target - Date.now();
+    const targetDate = new Date(dateString);
+    const diff = targetDate - Date.now();
     if (diff <= 0) return { days: 0, hours: 0, mins: 0, secs: 0 };
     return {
       days:  Math.floor(diff / 86_400_000),
@@ -53,9 +56,10 @@ function useCountdown(target) {
   };
   const [t, setT] = useState(calc);
   useEffect(() => {
+    setT(calc());
     const id = setInterval(() => setT(calc()), 1000);
     return () => clearInterval(id);
-  }, []); // eslint-disable-line
+  }, [dateString]);
   return t;
 }
 
@@ -104,7 +108,58 @@ function CountdownUnit({ value, label }) {
 
 // ── Main component ────────────────────────────────────────────────
 export default function SummerCampBanner() {
-  const { days, hours, mins, secs } = useCountdown(CAMP_DATE);
+  const { isOwner, updateContent } = useOwnerAuth();
+  const [campDateString, setCampDateString] = useState(DEFAULT_CAMP_DATE);
+  const [isEditingDate, setIsEditingDate] = useState(false);
+  const [tempDateInput, setTempDateInput] = useState(DEFAULT_CAMP_DATE);
+  
+  const { days, hours, mins, secs } = useCountdown(campDateString);
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
+  // Fetch countdown date from database on mount
+  useEffect(() => {
+    const fetchCountdownDate = async () => {
+      try {
+        const res = await fetch(`${API_URL}/content`);
+        const data = await res.json();
+        if (data.success) {
+          const found = data.content.find(c => c.key === 'summer-camp.countdown-date');
+          if (found && found.content && found.content.length >= 16) {
+            setCampDateString(found.content);
+            setTempDateInput(found.content.slice(0, 16));
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching countdown date:', error);
+      }
+    };
+    fetchCountdownDate();
+  }, []);
+
+  const handleSaveCountdownDate = async () => {
+    // Format the date string properly: YYYY-MM-DDTHH:MM:SS
+    let dateToSave = tempDateInput;
+    
+    // If input is from datetime-local (format: YYYY-MM-DDTHH:MM), add seconds
+    if (tempDateInput && tempDateInput.length === 16) {
+      dateToSave = tempDateInput + ':00';
+    }
+
+    // Validate date format
+    const testDate = new Date(dateToSave);
+    if (isNaN(testDate)) {
+      alert('Invalid date format. Please use the date picker.');
+      return;
+    }
+
+    try {
+      await updateContent('summer-camp.countdown-date', dateToSave);
+      setCampDateString(dateToSave);
+      setIsEditingDate(false);
+    } catch (error) {
+      alert('Error saving countdown date: ' + error.message);
+    }
+  };
 
   useEffect(() => {
     const link = document.createElement("link");
@@ -217,7 +272,9 @@ export default function SummerCampBanner() {
                 color:         C.orange,
               }}
             >
-              Now Enrolling · Summer 2025
+              <EditableText contentId="summer-camp.eyebrow" textColor={C.orange}>
+                Now Enrolling · Summer 2025
+              </EditableText>
             </span>
           </div>
 
@@ -233,23 +290,27 @@ export default function SummerCampBanner() {
                 WebkitTextStroke: "1px rgba(255,255,255,.32)",
               }}
             >
-              NIMO LABS
+              <EditableText contentId="summer-camp.title-line1" textColor="rgba(255,255,255,.32)">
+                NIMO LABS
+              </EditableText>
             </span>
-            <span
-              className="block leading-[.88]"
+            <div
               style={{
                 ...bebasNeue,
                 fontSize:             "clamp(42px,7vw,76px)",
                 letterSpacing:        ".025em",
-                background:           `linear-gradient(90deg,${C.orange},${C.pink})`,
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor:  "transparent",
-                backgroundClip:       "text",
                 filter:               "drop-shadow(0 0 28px rgba(255,98,48,.28))",
               }}
             >
-              SUMMER CAMP
-            </span>
+              <EditableText 
+                contentId="summer-camp.title-line2" 
+                textColor={C.orange}
+                className="block leading-[.88]"
+                hasGradient={true}
+              >
+                SUMMER CAMP
+              </EditableText>
+            </div>
 
             {/* Cyan sub-label — mirrors cc-sub from AnimatedTextCard */}
             <span
@@ -263,7 +324,9 @@ export default function SummerCampBanner() {
                 color:         C.cyan,
               }}
             >
-              Robotics &amp; Innovation
+              <EditableText contentId="summer-camp.subtitle" textColor={C.cyan}>
+                Robotics &amp; Innovation
+              </EditableText>
             </span>
           </div>
 
@@ -286,14 +349,16 @@ export default function SummerCampBanner() {
               letterSpacing: ".02em",
             }}
           >
-            An immersive 5-day robotics bootcamp where students aged 10–18
-            design, build, and program their own robots from scratch. No prior
-            experience needed — just curiosity and ambition.
+            <EditableText contentId="summer-camp.description" textColor="rgba(255,255,255,.45)">
+              An immersive 5-day robotics bootcamp where students aged 10–18
+              design, build, and program their own robots from scratch. No prior
+              experience needed — just curiosity and ambition.
+            </EditableText>
           </p>
 
           {/* Feature bullets */}
           <div className="flex flex-col gap-2.5 mb-6">
-            {features.map((f) => (
+            {features.map((f, idx) => (
               <div key={f.text} className="flex items-center gap-3">
                 <span
                   className="flex-shrink-0 w-6 h-6 flex items-center justify-center text-[11px]"
@@ -312,7 +377,9 @@ export default function SummerCampBanner() {
                     letterSpacing: ".03em",
                   }}
                 >
-                  {f.text}
+                  <EditableText contentId={`summer-camp.feature${idx}`} textColor="rgba(255,255,255,.55)">
+                    {f.text}
+                  </EditableText>
                 </span>
               </div>
             ))}
@@ -320,7 +387,7 @@ export default function SummerCampBanner() {
 
           {/* Tech stack badges */}
           <div className="flex flex-wrap gap-2 mb-8">
-            {techBadges.map((b) => (
+            {techBadges.map((b, idx) => (
               <span
                 key={b.label}
                 style={{
@@ -335,7 +402,9 @@ export default function SummerCampBanner() {
                   padding:       "5px 10px",
                 }}
               >
-                {b.label}
+                <EditableText contentId={`summer-camp.tech${idx}`} textColor={b.color}>
+                  {b.label}
+                </EditableText>
               </span>
             ))}
           </div>
@@ -365,7 +434,9 @@ export default function SummerCampBanner() {
                 e.currentTarget.style.boxShadow  = "0 0 24px rgba(255,98,48,.28)";
               }}
             >
-              Register Now →
+              <EditableText contentId="summer-camp.button-primary" textColor="#fff">
+                Register Now →
+              </EditableText>
             </button>
 
             <button
@@ -392,7 +463,9 @@ export default function SummerCampBanner() {
                 e.currentTarget.style.background  = "rgba(255,255,255,.03)";
               }}
             >
-              Learn More
+              <EditableText contentId="summer-camp.button-secondary" textColor="rgba(255,255,255,.45)">
+                Learn More
+              </EditableText>
             </button>
           </div>
         </div>
@@ -444,7 +517,9 @@ export default function SummerCampBanner() {
                 className="w-1 h-1 rounded-full animate-pulse"
                 style={{ background: C.orange }}
               />
-              Camp Starts In
+              <EditableText contentId="summer-camp.countdown-label" textColor="rgba(255,255,255,.28)">
+                Camp Starts In
+              </EditableText>
             </div>
 
             <div className="flex items-end gap-2.5">
@@ -453,6 +528,92 @@ export default function SummerCampBanner() {
               <CountdownUnit value={mins}  label="Min"  />
               <CountdownUnit value={secs}  label="Sec"  />
             </div>
+
+            {/* Edit countdown date button for owner */}
+            {isOwner && (
+              <div className="mt-4 pt-4" style={{ borderTop: "1px solid rgba(255,255,255,.06)" }}>
+                {isEditingDate ? (
+                  <div className="flex flex-col gap-2">
+                    <label style={{ fontSize: "10px", color: "rgba(255,255,255,.5)" }}>
+                      Change countdown date:
+                    </label>
+                    <input
+                      type="datetime-local"
+                      value={tempDateInput && tempDateInput.length >= 16 ? tempDateInput.slice(0, 16) : ''}
+                      onChange={(e) => setTempDateInput(e.target.value)}
+                      style={{
+                        padding: "8px",
+                        borderRadius: "4px",
+                        border: `1px solid ${C.orange}`,
+                        backgroundColor: "rgba(0,0,0,.5)",
+                        color: "#fff",
+                        fontFamily: "'Barlow', sans-serif",
+                        fontSize: "12px",
+                      }}
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleSaveCountdownDate}
+                        style={{
+                          padding: "6px 12px",
+                          backgroundColor: C.orange,
+                          color: "#fff",
+                          border: "none",
+                          borderRadius: "4px",
+                          fontSize: "11px",
+                          fontWeight: "bold",
+                          cursor: "pointer",
+                        }}
+                      >
+                        Save
+                      </button>
+                      <button
+                        onClick={() => {
+                          setIsEditingDate(false);
+                          if (campDateString && campDateString.length >= 16) {
+                            setTempDateInput(campDateString.slice(0, 16));
+                          }
+                        }}
+                        style={{
+                          padding: "6px 12px",
+                          backgroundColor: "rgba(255,255,255,.1)",
+                          color: "#fff",
+                          border: "1px solid rgba(255,255,255,.2)",
+                          borderRadius: "4px",
+                          fontSize: "11px",
+                          cursor: "pointer",
+                        }}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setIsEditingDate(true);
+                      // Ensure tempDateInput is properly formatted
+                      if (campDateString && campDateString.length >= 16) {
+                        setTempDateInput(campDateString.slice(0, 16));
+                      }
+                    }}
+                    style={{
+                      width: "100%",
+                      padding: "8px",
+                      backgroundColor: "rgba(255,98,48,.1)",
+                      color: C.orange,
+                      border: `1px solid ${C.orange}40`,
+                      borderRadius: "4px",
+                      fontSize: "11px",
+                      cursor: "pointer",
+                      fontWeight: "bold",
+                    }}
+                  >
+                    ✏️ Edit Countdown Date
+                  </button>
+                )}
+              </div>
+            )}
           </div>
 
           {/* ── Info card — corner bracket style matches AnimatedTextCard */}
@@ -479,7 +640,7 @@ export default function SummerCampBanner() {
             />
 
             {/* Info rows */}
-            {rows.map((row) => (
+            {rows.map((row, idx) => (
               <div key={row.label} className="flex items-start gap-3 mb-4 last:mb-0">
                 <span className="text-[14px] mt-0.5 opacity-70">{row.icon}</span>
                 <div>
@@ -494,7 +655,9 @@ export default function SummerCampBanner() {
                       marginBottom:  "3px",
                     }}
                   >
-                    {row.label}
+                    <EditableText contentId={`summer-camp.info${idx}.label`} textColor="rgba(255,255,255,.28)">
+                      {row.label}
+                    </EditableText>
                   </div>
                   <div
                     style={{
@@ -504,7 +667,9 @@ export default function SummerCampBanner() {
                       color:         "rgba(255,255,255,.78)",
                     }}
                   >
-                    {row.value}
+                    <EditableText contentId={`summer-camp.info${idx}.value`} textColor="rgba(255,255,255,.78)">
+                      {row.value}
+                    </EditableText>
                   </div>
                 </div>
               </div>
@@ -531,7 +696,9 @@ export default function SummerCampBanner() {
                     className="w-1 h-1 rounded-full animate-pulse"
                     style={{ background: C.orange }}
                   />
-                  Seats Filling
+                  <EditableText contentId="summer-camp.seats-label" textColor="rgba(255,255,255,.28)">
+                    Seats Filling
+                  </EditableText>
                 </div>
                 <span
                   style={{
@@ -542,7 +709,9 @@ export default function SummerCampBanner() {
                     color:         C.orange,
                   }}
                 >
-                  28 / 40
+                  <EditableText contentId="summer-camp.seats-count" textColor={C.orange}>
+                    28 / 40
+                  </EditableText>
                 </span>
               </div>
 
@@ -569,7 +738,9 @@ export default function SummerCampBanner() {
                   color:         "rgba(255,255,255,.28)",
                 }}
               >
-                Only 12 spots remaining out of 40
+                <EditableText contentId="summer-camp.seats-message" textColor="rgba(255,255,255,.28)">
+                  Only 12 spots remaining out of 40
+                </EditableText>
               </div>
             </div>
           </div>
