@@ -4,7 +4,7 @@ import { useOwnerAuth } from '../context/OwnerAuthContext'
 const dmSans = { fontFamily: "'DM Sans', sans-serif" }
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
-export default function EditableText({ contentId, children, className = '', accent = '#FF6B35', textColor = 'rgba(255,255,255,.45)', hasGradient = false }) {
+export default function EditableText({ contentId, children, className = '', accent = '#FF6B35', textColor = 'rgba(255,255,255,.45)', hasGradient = false, style = {} }) {
   const { isOwner, updateContent } = useOwnerAuth()
   const [isEditing, setIsEditing] = useState(false)
   // Convert children to string to handle React elements
@@ -188,8 +188,9 @@ export default function EditableText({ contentId, children, className = '', acce
       onClick={() => isOwner && setIsEditing(true)}
       className={`${isOwner ? 'cursor-pointer hover:bg-white/5 px-1 rounded transition-colors' : ''} ${className}`}
       style={{ 
-        display: 'inline',
-        pointerEvents: 'auto'
+        pointerEvents: 'auto',
+        color: textColor,
+        ...style
       }}
       role="button"
       tabIndex={isOwner ? 0 : -1}
@@ -198,17 +199,15 @@ export default function EditableText({ contentId, children, className = '', acce
           setIsEditing(true)
         }
       }}
+      aria-label={`Click to edit ${contentId}`}
     >
       {hasGradient ? (
-        <span
-          style={{
-            background: `linear-gradient(90deg,#FF6230,#E0357A)`,
-            WebkitBackgroundClip: "text",
-            WebkitTextFillColor:  "transparent",
-            backgroundClip:       "text",
-            display: 'inline-block'
-          }}
-        >
+        <span style={{ 
+          background: 'linear-gradient(90deg, #FF6230, #E0357A)',
+          WebkitBackgroundClip: 'text',
+          WebkitTextFillColor: 'transparent',
+          backgroundClip: 'text'
+        }}>
           {displayText}
         </span>
       ) : (
@@ -217,3 +216,4 @@ export default function EditableText({ contentId, children, className = '', acce
     </span>
   )
 }
+
