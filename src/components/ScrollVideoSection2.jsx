@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import AnimatedTextCard1 from './AnimatedTextCard1'
+import VideoUploader from './VideoUploader'
+import { useOwnerAuth } from '../context/OwnerAuthContext'
 
 gsap.registerPlugin(ScrollTrigger)
 
@@ -65,9 +67,12 @@ export default function ScrollVideoSection2() {
   const cardRefs        = useRef([])
   const tlRef           = useRef(null)
 
+  const { isOwner } = useOwnerAuth()
+
   const [activeChapter, setActiveChapter] = useState(0)
   const [chapterLabel,  setChapterLabel]  = useState('Chapter Two')
   const [autoplayEnabled, setAutoplayEnabled] = useState(false)
+  const [videoUrl, setVideoUrl] = useState('/videos/nikki1.mp4')
   const autoplayEnabledRef = useRef(false)
 
   useEffect(() => {
@@ -77,6 +82,30 @@ export default function ScrollVideoSection2() {
     if (autoplayEnabled) video.play().catch(() => {})
     else video.pause()
   }, [autoplayEnabled])
+
+  useEffect(() => {
+    const fetchVideo = async () => {
+      try {
+        const res = await fetch('/api/videos/chapter-two')
+        if (res.ok) {
+          const data = await res.json()
+          setVideoUrl(data.url)
+        }
+      } catch (err) {
+        console.error('Error fetching video:', err)
+      }
+    }
+    fetchVideo()
+  }, [])
+
+  const handleVideoUploadSuccess = (videoData) => {
+    setVideoUrl(videoData.url)
+    const video = videoRef.current
+    if (video) {
+      video.src = videoData.url
+      video.load()
+    }
+  }
 
   useEffect(() => {
     const cards = cardRefs.current
@@ -159,11 +188,20 @@ export default function ScrollVideoSection2() {
       {/* ════════ LEFT — Content cards ════════ */}
       <div className="relative w-[45%] h-full">
         {sections.map((section, i) => (
-          <AnimatedTextCard1
+          <div
             key={section.id}
-            data={section}
-            ref={(el) => { cardRefs.current[i] = el }}
-          />
+            style={{
+              position: 'absolute',
+              inset: 0,
+              pointerEvents: activeChapter === i ? 'auto' : 'none',
+              zIndex: activeChapter === i ? 10 : 0
+            }}
+          >
+            <AnimatedTextCard1
+              data={section}
+              ref={(el) => { cardRefs.current[i] = el }}
+            />
+          </div>
         ))}
       </div>
 
@@ -172,7 +210,7 @@ export default function ScrollVideoSection2() {
         <video
           ref={videoRef}
           className="absolute inset-0 h-full w-full"
-          src="/videos/nikki1.mp4"
+          src={videoUrl}
           muted
           playsInline
           preload="auto"
@@ -183,6 +221,13 @@ export default function ScrollVideoSection2() {
             video.currentTime = 0
           }}
         />
+
+        {/* Video upload button for owner */}
+        {isOwner && (
+          <div className="absolute top-8 right-10 z-20">
+            <VideoUploader sectionId="chapter-two" onUploadSuccess={handleVideoUploadSuccess} />
+          </div>
+        )}
 
         {/* Vignette — mirrors from right side */}
         <div
