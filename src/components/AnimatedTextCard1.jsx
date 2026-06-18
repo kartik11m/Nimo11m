@@ -1,12 +1,16 @@
 import { forwardRef } from 'react'
+import EditableText from './EditableText'
 
 /**
- * AnimatedTextCard
- * Rendered absolutely inside the right panel of ScrollVideoSection.
+ * AnimatedTextCard1
+ * Rendered absolutely inside ScrollVideoSection2.
  * All animation (opacity, y, filter, card-rule scaleX) is driven externally
- * by GSAP in ScrollVideoSection — this component just provides the DOM.
+ * by GSAP — this component provides the DOM with editable content.
  */
-const AnimatedTextCard = forwardRef(function AnimatedTextCard({ data }, ref) {
+const AnimatedTextCard1 = forwardRef(function AnimatedTextCard1({ data }, ref) {
+  const sectionId = data?.id ?? 0
+  console.log(`AnimatedTextCard1 rendered with sectionId: ${sectionId}, data:`, data)
+
   return (
     <div
       ref={ref}
@@ -15,38 +19,60 @@ const AnimatedTextCard = forwardRef(function AnimatedTextCard({ data }, ref) {
       style={{ willChange: 'transform, opacity, filter' }}
     >
       {/* Ghost chapter number */}
-      <span
-        className="font-display text-[5rem] leading-none text-white/[.05] -mb-3 tracking-[-0.01em] select-none"
-        aria-hidden="true"
+      <EditableText
+        contentId={`${sectionId}.chapter-number`}
+        textColor="rgba(255,255,255,.05)"
+        className="font-display text-[5rem] leading-none -mb-3 tracking-[-0.01em] select-none block"
+        accent={data.accent}
       >
         {data.num}
-      </span>
+      </EditableText>
 
       {/* Chapter badge */}
-      <span
-        className="font-condensed font-light text-[.7rem] tracking-[.45em] uppercase px-3 py-1 self-start mb-4 border"
+      <EditableText
+        contentId={`${sectionId}.chapter-label`}
+        textColor={data.accent}
+        className="font-condensed font-light text-[.7rem] tracking-[.45em] uppercase px-3 py-1 self-start mb-4 border inline-block"
+        accent={data.accent}
         style={{
-          color: data.accent,
           borderColor: `rgba(${data.rgb},.3)`,
           background: `rgba(${data.rgb},.07)`,
         }}
       >
         {data.chapter}
-      </span>
+      </EditableText>
 
-      {/* Heading */}
-      <h2
-        className="font-display leading-[.9] tracking-[.025em] mb-5"
-        style={{ fontSize: 'clamp(2.8rem, 4.5vw, 5rem)' }}
+      {/* Title Main */}
+      <EditableText
+        contentId={`${sectionId}.title`}
+        textColor="rgba(255,255,255,1)"
+        className="font-display leading-[.9] tracking-[.025em] mb-1"
+        style={{ fontSize: 'clamp(2.8rem, 4.5vw, 5rem)', display: 'block' }}
+        accent={data.accent}
       >
-        <span className="block text-white">{data.title}</span>
-        <span className="block" style={{ color: data.accent }}>{data.titleAccent}</span>
-      </h2>
+        {data.title}
+      </EditableText>
+
+      {/* Title Accent */}
+      <EditableText
+        contentId={`${sectionId}.title-accent`}
+        textColor={data.accent}
+        className="font-display leading-[.9] tracking-[.025em] mb-5"
+        style={{ fontSize: 'clamp(2.8rem, 4.5vw, 5rem)', display: 'block' }}
+        accent={data.accent}
+      >
+        {data.titleAccent}
+      </EditableText>
 
       {/* Subtitle */}
-      <p className="font-condensed font-light text-[.95rem] tracking-[.12em] uppercase text-white/50 mb-5">
+      <EditableText
+        contentId={`${sectionId}.subtitle`}
+        textColor="rgba(255,255,255,.5)"
+        className="font-condensed font-light text-[.95rem] tracking-[.12em] uppercase mb-5"
+        accent={data.accent}
+      >
         {data.subtitle}
-      </p>
+      </EditableText>
 
       {/* Animated rule — GSAP drives scaleX 0 → 1 */}
       <div
@@ -55,11 +81,16 @@ const AnimatedTextCard = forwardRef(function AnimatedTextCard({ data }, ref) {
       />
 
       {/* Body copy */}
-      <p className="font-light text-[.9rem] leading-[1.85] text-white/45 max-w-[33ch]">
+      <EditableText
+        contentId={`${sectionId}.body`}
+        textColor="rgba(255,255,255,.45)"
+        className="font-light text-[.9rem] leading-[1.85] max-w-[33ch]"
+        accent={data.accent}
+      >
         {data.body}
-      </p>
+      </EditableText>
     </div>
   )
 })
 
-export default AnimatedTextCard
+export default AnimatedTextCard1
