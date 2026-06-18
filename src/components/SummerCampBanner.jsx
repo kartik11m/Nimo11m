@@ -228,6 +228,29 @@ export default function SummerCampBanner() {
         }}
       />
 
+      {/* Owner-only remove button */}
+      {isOwner && (
+        <button
+          onClick={() => {
+            if (confirm('Remove Summer Camp section from the site?')) {
+              updateContent('summer-camp.visible', 'false').then(() => {
+                window.location.reload();
+              });
+            }
+          }}
+          className="absolute top-4 right-6 px-4 py-2 text-xs font-medium rounded transition-all z-50"
+          style={{
+            backgroundColor: 'rgba(255,98,48,.2)',
+            color: C.orange,
+            border: `1px solid ${C.orange}60`,
+          }}
+          onMouseEnter={(e) => (e.target.style.backgroundColor = 'rgba(255,98,48,.3)')}
+          onMouseLeave={(e) => (e.target.style.backgroundColor = 'rgba(255,98,48,.2)')}
+        >
+          ✕ Remove Section
+        </button>
+      )}
+
       {/* ══ Content ══════════════════════════════════════════════ */}
       <div className="relative z-[2] max-w-5xl mx-auto flex items-start justify-between gap-14 flex-wrap">
 

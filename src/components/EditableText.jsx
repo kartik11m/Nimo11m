@@ -7,8 +7,10 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 export default function EditableText({ contentId, children, className = '', accent = '#FF6B35', textColor = 'rgba(255,255,255,.45)', hasGradient = false }) {
   const { isOwner, updateContent } = useOwnerAuth()
   const [isEditing, setIsEditing] = useState(false)
-  const [displayText, setDisplayText] = useState(children)
-  const [editValue, setEditValue] = useState(children)
+  // Convert children to string to handle React elements
+  const childrenString = typeof children === 'string' ? children : String(children)
+  const [displayText, setDisplayText] = useState(childrenString)
+  const [editValue, setEditValue] = useState(childrenString)
   const [saving, setSaving] = useState(false)
   const textareaRef = useRef(null)
 
@@ -29,19 +31,35 @@ export default function EditableText({ contentId, children, className = '', acce
       try {
         const res = await fetch(`${API_URL}/content`)
         const data = await res.json()
-        if (data.success) {
+        if (data.success && Array.isArray(data.content)) {
           const found = data.content.find(c => c.key === contentId)
-          if (found) {
+          
+          if (process.env.NODE_ENV !== 'production') {
+            console.log(`EditableText[${contentId}]: Found = ${found ? 'YES' : 'NO'}`)
+          }
+          
+          if (found && found.content) {
             setDisplayText(found.content)
             setEditValue(found.content)
+          } else {
+            // No content found in DB, use default from children
+            setDisplayText(childrenString)
+            setEditValue(childrenString)
           }
+        } else {
+          // API error, use default
+          setDisplayText(childrenString)
+          setEditValue(childrenString)
         }
       } catch (error) {
         console.error('Error fetching content:', error)
+        // Fallback to children string if fetch fails
+        setDisplayText(childrenString)
+        setEditValue(childrenString)
       }
     }
     fetchContent()
-  }, [contentId])
+  }, [contentId, childrenString])
 
   const handleSave = async () => {
     if (editValue === displayText) {
@@ -169,7 +187,17 @@ export default function EditableText({ contentId, children, className = '', acce
     <span
       onClick={() => isOwner && setIsEditing(true)}
       className={`${isOwner ? 'cursor-pointer hover:bg-white/5 px-1 rounded transition-colors' : ''} ${className}`}
-      style={{ display: 'inline' }}
+      style={{ 
+        display: 'inline',
+        pointerEvents: 'auto'
+      }}
+      role="button"
+      tabIndex={isOwner ? 0 : -1}
+      onKeyPress={(e) => {
+        if (isOwner && (e.key === 'Enter' || e.key === ' ')) {
+          setIsEditing(true)
+        }
+      }}
     >
       {hasGradient ? (
         <span

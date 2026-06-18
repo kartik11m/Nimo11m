@@ -17,9 +17,32 @@ import BlogPreview from '../components/BlogPreview'
 import FAQSection from '../components/FAQSection'
 import PartnersStrip from '../components/PartnersStrip'
 import CookieBanner from '../components/CookieBanner'
+import { useState, useEffect } from 'react'
+import { useOwnerAuth } from '../context/OwnerAuthContext'
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
 export default function Home() {
+  const { isOwner, updateContent } = useOwnerAuth()
+  const [showSummerCamp, setShowSummerCamp] = useState(true)
+
+  useEffect(() => {
+    const fetchSummerCampVisibility = async () => {
+      try {
+        const res = await fetch(`${API_URL}/content`)
+        const data = await res.json()
+        if (data.success) {
+          const visibility = data.content.find(c => c.key === 'summer-camp.visible')
+          if (visibility) {
+            setShowSummerCamp(visibility.content !== 'false')
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching summer camp visibility:', error)
+      }
+    }
+    fetchSummerCampVisibility()
+  }, [])
   return (
     <main className="bg-bg text-white overflow-x-hidden">
       <ScrollRobotGuide />
@@ -32,9 +55,32 @@ export default function Home() {
         <ServiceHighlights />
       </section>
 
-      <section id="home-summer">
-        <SummerCampBanner />
-      </section>
+      {showSummerCamp && (
+        <section id="home-summer">
+          <SummerCampBanner />
+        </section>
+      )}
+
+      {!showSummerCamp && isOwner && (
+        <div className="py-16 px-4 text-center border-t border-white/10">
+          <p className="text-white/50 mb-4">Summer Camp section is hidden</p>
+          <button
+            onClick={() => {
+              updateContent('summer-camp.visible', 'true').then(() => {
+                setShowSummerCamp(true)
+              })
+            }}
+            className="px-6 py-2 bg-orange/20 text-orange border border-orange/40 rounded-lg hover:bg-orange/30 transition-colors font-medium"
+            style={{
+              backgroundColor: 'rgba(255,98,48,.15)',
+              color: '#FF6230',
+              borderColor: 'rgba(255,98,48,.4)'
+            }}
+          >
+            + Add Summer Camp Section
+          </button>
+        </div>
+      )}
 
       <section id="home-robots">
         {/* <RobotsPreview /> */}
