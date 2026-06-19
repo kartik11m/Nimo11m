@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { useOwnerAuth } from '../context/OwnerAuthContext'
 
 const bebasNeue = { fontFamily: "'Bebas Neue', sans-serif" }
 const syne      = { fontFamily: "'Syne', sans-serif" }
@@ -133,11 +134,19 @@ function MosaicCell({ photo, layout, chapterColor, chapterRgb, index, total, onC
 }
 
 // ── Lightbox ───────────────────────────────────────────────────────
-function Lightbox({ photos, startIndex, chapterColor, chapterRgb, chapter, onClose }) {
+function Lightbox({ photos, startIndex, chapterColor, chapterRgb, chapter, chapterKey, token, onClose, onEdit, onDelete, onAdd }) {
   const [idx, setIdx]           = useState(startIndex)
   const [direction, setDir]     = useState(null) // 'left' | 'right'
   const [animating, setAnim]    = useState(false)
   const [zoomed, setZoomed]     = useState(false)
+  const [editMode, setEditMode] = useState(false)
+  const [editCaption, setEditCaption] = useState('')
+  const [editTag, setEditTag]   = useState('')
+  const [changePhotoFile, setChangePhotoFile] = useState(null)
+  const [showAddForm, setShowAddForm] = useState(false)
+  const [newCaption, setNewCaption] = useState('')
+  const [newTag, setNewTag]     = useState('')
+  const [newFile, setNewFile]   = useState(null)
   const imgRef                  = useRef(null)
 
   const go = useCallback((next) => {
@@ -145,6 +154,8 @@ function Lightbox({ photos, startIndex, chapterColor, chapterRgb, chapter, onClo
     setDir(next > idx ? 'right' : 'left')
     setAnim(true)
     setZoomed(false)
+    setEditMode(false)
+    setShowAddForm(false)
     setTimeout(() => {
       setIdx(next)
       setDir(null)
@@ -163,9 +174,67 @@ function Lightbox({ photos, startIndex, chapterColor, chapterRgb, chapter, onClo
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [idx, animating])
+  }, [idx, animating, onClose])
 
   const photo = photos[idx]
+
+  const handleEditStart = () => {
+    setEditCaption(photo.caption)
+    setEditTag(photo.tag)
+    setEditMode(true)
+  }
+
+  const handleEditSave = async () => {
+    if (!editCaption || !editTag) return
+    const photoId = photo._id || photo.photoId || photo.id
+    await onEdit(photoId, editCaption, editTag)
+    setEditMode(false)
+  }
+
+  const handleChangePhoto = async () => {
+    if (!changePhotoFile) return
+    const reader = new FileReader()
+    reader.onload = async (e) => {
+      try {
+        const photoId = photo._id || photo.photoId || photo.id
+        const res = await fetch(`/api/photos/${photoId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            src: e.target.result,
+            caption: editCaption,
+            tag: editTag,
+          }),
+        })
+        const data = await res.json()
+        if (data.success) {
+          setChangePhotoFile(null)
+          // Trigger a manual refresh
+          setTimeout(() => window.location.reload(), 500)
+        }
+      } catch (error) {
+        console.error('Error changing photo:', error)
+        alert('Failed to change photo')
+      }
+    }
+    reader.readAsDataURL(changePhotoFile)
+  }
+
+  const handleAddPhoto = async () => {
+    if (!newCaption || !newTag || !newFile) return
+    const reader = new FileReader()
+    reader.onload = async (e) => {
+      await onAdd(newCaption, newTag, e.target.result)
+      setNewCaption('')
+      setNewTag('')
+      setNewFile(null)
+      setShowAddForm(false)
+    }
+    reader.readAsDataURL(newFile)
+  }
 
   const imgStyle = {
     opacity:   animating ? 0 : 1,
@@ -230,6 +299,56 @@ function Lightbox({ photos, startIndex, chapterColor, chapterRgb, chapter, onClo
             }}
             title="Toggle zoom"
           >⊕</button>
+
+          {/* Owner controls */}
+          {token && (
+            <>
+              {/* Edit button */}
+              <button
+                onClick={() => !editMode ? handleEditStart() : handleEditSave()}
+                className="text-[9px] font-bold tracking-[.28em] uppercase border px-4 py-2 transition-all duration-200"
+                style={{
+                  ...syne,
+                  borderColor: editMode ? chapterColor : 'rgba(255,255,255,.12)',
+                  color: editMode ? chapterColor : 'rgba(240,234,214,.4)',
+                  background: editMode ? `rgba(${chapterRgb},.1)` : 'transparent',
+                }}
+                onMouseEnter={(e) => { if (!editMode) { e.currentTarget.style.borderColor = chapterColor; e.currentTarget.style.color = chapterColor } }}
+                onMouseLeave={(e) => { if (!editMode) { e.currentTarget.style.borderColor = 'rgba(255,255,255,.12)'; e.currentTarget.style.color = 'rgba(240,234,214,.4)' } }}
+              >
+                {editMode ? '✓ Save' : '✎ Edit'}
+              </button>
+
+              {/* Delete button */}
+              <button
+                onClick={() => onDelete(photo._id || photo.photoId || photo.id)}
+                className="text-[9px] font-bold tracking-[.28em] uppercase border px-4 py-2 transition-all duration-200"
+                style={{
+                  ...syne,
+                  borderColor: 'rgba(255,0,0,.3)',
+                  color: '#ff6b6b',
+                  background: 'transparent',
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#ff6b6b'; e.currentTarget.style.boxShadow = '0 0 12px rgba(255,107,107,.3)' }}
+                onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(255,0,0,.3)'; e.currentTarget.style.boxShadow = 'none' }}
+                title="Delete this photo"
+              >🗑 Delete</button>
+
+              {/* Add button */}
+              <button
+                onClick={() => setShowAddForm(!showAddForm)}
+                className="text-[9px] font-bold tracking-[.28em] uppercase border px-4 py-2 transition-all duration-200"
+                style={{
+                  ...syne,
+                  borderColor: showAddForm ? chapterColor : 'rgba(255,255,255,.12)',
+                  color: showAddForm ? chapterColor : 'rgba(240,234,214,.4)',
+                  background: showAddForm ? `rgba(${chapterRgb},.1)` : 'transparent',
+                }}
+                onMouseEnter={(e) => { if (!showAddForm) { e.currentTarget.style.borderColor = chapterColor; e.currentTarget.style.color = chapterColor } }}
+                onMouseLeave={(e) => { if (!showAddForm) { e.currentTarget.style.borderColor = 'rgba(255,255,255,.12)'; e.currentTarget.style.color = 'rgba(240,234,214,.4)' } }}
+              >+ Add</button>
+            </>
+          )}
 
           {/* Close */}
           <button
@@ -328,6 +447,146 @@ function Lightbox({ photos, startIndex, chapterColor, chapterRgb, chapter, onClo
         >›</button>
       </div>
 
+      {/* ── Edit Form ── */}
+      {editMode && token && (
+        <div className="relative z-[2] border-t border-white/[.07] px-10 py-6 bg-[#050508]/50 backdrop-blur-sm">
+          <h3 className="text-sm font-bold mb-4" style={{ color: chapterColor, fontFamily: "'Syne', sans-serif" }}>Edit Photo</h3>
+          <div className="space-y-4">
+            <div className="flex gap-4">
+              <div className="flex-1">
+                <label className="text-[11px] font-bold uppercase text-white/60 block mb-2" style={syne}>Caption</label>
+                <input
+                  type="text"
+                  value={editCaption}
+                  onChange={(e) => setEditCaption(e.target.value)}
+                  className="w-full bg-[#0a0a0d] border rounded px-3 py-2 text-sm text-white"
+                  style={{ borderColor: `rgba(${chapterRgb},.3)` }}
+                />
+              </div>
+              <div className="flex-1">
+                <label className="text-[11px] font-bold uppercase text-white/60 block mb-2" style={syne}>Tag</label>
+                <input
+                  type="text"
+                  value={editTag}
+                  onChange={(e) => setEditTag(e.target.value)}
+                  className="w-full bg-[#0a0a0d] border rounded px-3 py-2 text-sm text-white"
+                  style={{ borderColor: `rgba(${chapterRgb},.3)` }}
+                />
+              </div>
+            </div>
+
+            {/* Change Photo Section */}
+            <div className="pt-4 border-t border-white/[.07]">
+              <label className="text-[11px] font-bold uppercase text-white/60 block mb-2" style={syne}>Change Photo Image</label>
+              <div className="flex gap-3 items-end">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setChangePhotoFile(e.target.files?.[0])}
+                  className="flex-1 text-xs text-white/50 bg-[#0a0a0d] border rounded px-3 py-2"
+                  style={{ borderColor: `rgba(${chapterRgb},.3)` }}
+                />
+                <button
+                  onClick={handleChangePhoto}
+                  disabled={!changePhotoFile}
+                  className="text-[9px] font-bold uppercase border px-4 py-2 transition-all"
+                  style={{
+                    borderColor: changePhotoFile ? chapterColor : 'rgba(255,255,255,.2)',
+                    color: changePhotoFile ? chapterColor : 'rgba(240,234,214,.4)',
+                    background: changePhotoFile ? `rgba(${chapterRgb},.15)` : 'transparent',
+                    opacity: changePhotoFile ? 1 : 0.5,
+                    cursor: changePhotoFile ? 'pointer' : 'not-allowed',
+                  }}
+                >🖼 Change</button>
+              </div>
+            </div>
+
+            {/* Action buttons */}
+            <div className="flex gap-3 pt-4">
+              <button
+                onClick={handleEditSave}
+                className="text-[9px] font-bold uppercase border px-4 py-2 transition-all"
+                style={{
+                  borderColor: chapterColor,
+                  color: chapterColor,
+                  background: `rgba(${chapterRgb},.1)`,
+                }}
+              >✓ Save Changes</button>
+              <button
+                onClick={() => setEditMode(false)}
+                className="text-[9px] font-bold uppercase border px-4 py-2 transition-all"
+                style={{
+                  borderColor: 'rgba(255,255,255,.2)',
+                  color: 'rgba(240,234,214,.6)',
+                }}
+              >Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Add Form ── */}
+      {showAddForm && token && (
+        <div className="relative z-[2] border-t border-white/[.07] px-10 py-6 bg-[#050508]/50 backdrop-blur-sm">
+          <h3 className="text-sm font-bold mb-4" style={{ color: chapterColor, fontFamily: "'Syne', sans-serif" }}>Add New Photo</h3>
+          <div className="grid grid-cols-3 gap-4 items-end">
+            <div>
+              <label className="text-[11px] font-bold uppercase text-white/60 block mb-2" style={syne}>Caption</label>
+              <input
+                type="text"
+                value={newCaption}
+                onChange={(e) => setNewCaption(e.target.value)}
+                placeholder="Photo caption"
+                className="w-full bg-[#0a0a0d] border rounded px-3 py-2 text-sm text-white"
+                style={{ borderColor: `rgba(${chapterRgb},.3)` }}
+              />
+            </div>
+            <div>
+              <label className="text-[11px] font-bold uppercase text-white/60 block mb-2" style={syne}>Tag</label>
+              <input
+                type="text"
+                value={newTag}
+                onChange={(e) => setNewTag(e.target.value)}
+                placeholder="Photo tag"
+                className="w-full bg-[#0a0a0d] border rounded px-3 py-2 text-sm text-white"
+                style={{ borderColor: `rgba(${chapterRgb},.3)` }}
+              />
+            </div>
+            <div>
+              <label className="text-[11px] font-bold uppercase text-white/60 block mb-2" style={syne}>Image</label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => setNewFile(e.target.files?.[0])}
+                className="text-[10px] text-white/50 w-full"
+              />
+            </div>
+          </div>
+          <div className="flex gap-3 mt-4">
+            <button
+              onClick={handleAddPhoto}
+              disabled={!newCaption || !newTag || !newFile}
+              className="text-[9px] font-bold uppercase border px-4 py-2 transition-all"
+              style={{
+                borderColor: chapterColor,
+                color: chapterColor,
+                background: `rgba(${chapterRgb},.1)`,
+                opacity: !newCaption || !newTag || !newFile ? 0.5 : 1,
+                cursor: !newCaption || !newTag || !newFile ? 'not-allowed' : 'pointer',
+              }}
+            >✓ Add Photo</button>
+            <button
+              onClick={() => setShowAddForm(false)}
+              className="text-[9px] font-bold uppercase border px-4 py-2 transition-all"
+              style={{
+                borderColor: 'rgba(255,255,255,.2)',
+                color: 'rgba(240,234,214,.6)',
+              }}
+            >Cancel</button>
+          </div>
+        </div>
+      )}
+
       {/* ── Thumbnail strip ── */}
       <div className="relative z-[2] border-t border-white/[.07] px-10 py-4 flex-shrink-0">
         <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
@@ -362,18 +621,133 @@ function Lightbox({ photos, startIndex, chapterColor, chapterRgb, chapter, onClo
 export default function ChapterPhotoGallery({
   photos        = [],
   chapter       = 'Chapter',
+  chapterKey    = null, // e.g., "ch1", "ch2", "nimo" for fetching from API
   sectionTitle  = ['MOMENTS THAT', 'DEFINED US'],
   sectionSub    = 'Behind the Scenes · Lab Sessions · Milestones',
   chapterColor  = '#FF6B35',
   chapterRgb    = '255,107,53',
 }) {
+  const { token } = useOwnerAuth()
   const [lightboxIndex, setLightboxIndex] = useState(null)
+  const [displayPhotos, setDisplayPhotos] = useState(photos)
+  const [loading, setLoading] = useState(false)
+  const [refreshKey, setRefreshKey] = useState(0)
+
+  // Fetch photos from API if chapterKey is provided
+  useEffect(() => {
+    if (!chapterKey) return
+
+    const fetchPhotos = async () => {
+      try {
+        setLoading(true)
+        const res = await fetch(`/api/photos/chapter/${chapterKey}`)
+        const data = await res.json()
+        if (data.success) {
+          setDisplayPhotos(data.photos)
+        }
+      } catch (error) {
+        console.error('Error fetching photos:', error)
+        // Fall back to initial photos if fetch fails
+        setDisplayPhotos(photos)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchPhotos()
+  }, [chapterKey, photos, refreshKey])
 
   // Assign layout pattern per photo
-  const withLayout = photos.map((p, i) => ({
+  const withLayout = displayPhotos.map((p, i) => ({
     ...p,
     layout: LAYOUT_PATTERN[i % LAYOUT_PATTERN.length],
   }))
+
+  const handlePhotosUpdate = () => {
+    // Trigger a refresh of photos from API
+    setRefreshKey(k => k + 1)
+  }
+
+  const handleEditPhoto = async (photoId, caption, tag) => {
+    try {
+      const res = await fetch(`/api/photos/${photoId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ caption, tag }),
+      })
+
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`)
+      }
+
+      const data = await res.json()
+      if (data.success) {
+        handlePhotosUpdate()
+      }
+    } catch (error) {
+      console.error('Error editing photo:', error)
+      alert('Failed to edit photo')
+    }
+  }
+
+  const handleDeletePhoto = async (photoId) => {
+    if (!window.confirm('Delete this photo?')) return
+    try {
+      const res = await fetch(`/api/photos/${photoId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` },
+      })
+      
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`)
+      }
+      
+      const data = await res.json()
+      if (data.success) {
+        handlePhotosUpdate()
+      }
+    } catch (error) {
+      console.error('Error deleting photo:', error)
+      alert('Failed to delete photo')
+    }
+  }
+
+  const handleAddPhoto = async (caption, tag, src) => {
+    try {
+      const timestamp = Date.now()
+      const photoId = `${chapterKey}-p-${timestamp}`
+
+      const res = await fetch('/api/photos', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          photoId,
+          src,
+          caption,
+          tag,
+          chapter: chapterKey,
+        }),
+      })
+
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`)
+      }
+
+      const data = await res.json()
+      if (data.success) {
+        handlePhotosUpdate()
+      }
+    } catch (error) {
+      console.error('Error adding photo:', error)
+      alert('Failed to add photo')
+    }
+  }
 
   return (
     <>
@@ -523,12 +897,17 @@ export default function ChapterPhotoGallery({
       {/* Lightbox */}
       {lightboxIndex !== null && (
         <Lightbox
-          photos={photos}
+          photos={displayPhotos}
           startIndex={lightboxIndex}
           chapterColor={chapterColor}
           chapterRgb={chapterRgb}
           chapter={chapter}
+          chapterKey={chapterKey}
+          token={token}
           onClose={() => setLightboxIndex(null)}
+          onEdit={handleEditPhoto}
+          onDelete={handleDeletePhoto}
+          onAdd={handleAddPhoto}
         />
       )}
     </>
