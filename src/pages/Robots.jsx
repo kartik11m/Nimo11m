@@ -236,6 +236,7 @@ export default function RobotsPage() {
       <ChapterPhotoGallery
         photos={nimoPhotos.slice(0, 8)}
         chapter="Chapter One"
+        chapterKey="ch1"
         sectionTitle={['BUILT WITH', 'BARE HANDS']}
         sectionSub="Lab Sessions · Soldering · Assembly · Prototype Days"
         chapterColor="#FF6B35"
@@ -261,6 +262,7 @@ export default function RobotsPage() {
       <ChapterPhotoGallery
         photos={nimoPhotos.slice(8, 16)}
         chapter="Chapter Two"
+        chapterKey="ch2"
         sectionTitle={['EVERY SIGNAL', 'COUNTS']}
         sectionSub="Sensor Rigs · Field Tests · Dashboard Sessions"
         chapterColor="#00F5FF"
@@ -286,6 +288,7 @@ export default function RobotsPage() {
       <ChapterPhotoGallery
         photos={nimoPhotos.slice(16, 32)}
         chapter="Chapter Three"
+        chapterKey="ch3"
         sectionTitle={['MACHINES THAT', 'THINK FOR THEMSELVES']}
         sectionSub="Vision Labs · Algorithm Boards · Competition Day"
         chapterColor="#A855F7"

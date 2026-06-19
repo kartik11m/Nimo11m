@@ -9,7 +9,19 @@ const PORT = process.env.PORT || 5000
 // ── Middleware ────────────────────────────────────────────────
 app.use(helmet()) // Security headers
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+  origin: function(origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true)
+    
+    // Allow localhost on any port during development
+    if (origin.includes('localhost')) return callback(null, true)
+    
+    // In production, use CORS_ORIGIN env var
+    const allowedOrigin = process.env.CORS_ORIGIN || 'http://localhost:5173'
+    if (origin === allowedOrigin) return callback(null, true)
+    
+    callback(new Error('Not allowed by CORS'))
+  },
   credentials: true,
 }))
 app.use(express.json())
@@ -18,6 +30,7 @@ app.use(express.urlencoded({ extended: true }))
 // ── Database Connection ───────────────────────────────────────
 const connectDB = require('./config/database')
 const initializeOwner = require('./utils/initializeOwner')
+const initializePhotos = require('./utils/initializePhotos')
 
 connectDB()
 
@@ -25,6 +38,11 @@ connectDB()
 setTimeout(() => {
   initializeOwner()
 }, 1000)
+
+// ── Initialize Default Photos ─────────────────────────────────
+setTimeout(() => {
+  initializePhotos.initializePhotos()
+}, 1500)
 
 // ── API Routes ────────────────────────────────────────────────
 app.use('/api', require('./routes/index'))

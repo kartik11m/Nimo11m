@@ -5,6 +5,9 @@ const router = express.Router()
 // Owner authentication and content management
 router.use('/', require('./owner'))
 
+// Photo management routes
+router.use('/', require('./photos'))
+
 // Contact form routes
 router.use('/contact', require('./contact'))
 
