@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
+import { useOwnerAuth } from '../context/OwnerAuthContext'
 
 const bebasNeue = { fontFamily: "'Bebas Neue', sans-serif" }
 const syne      = { fontFamily: "'Syne', sans-serif" }
@@ -167,14 +168,39 @@ function TableCard({ video, rotation, onSelect }) {
 }
 
 // ── Video Player ───────────────────────────────────────────────────
-function VideoPlayer({ video, onClose }) {
+function VideoPlayer({ video, onClose, token, onEdit, onDelete }) {
   const vidRef = useRef(null)
+  const [isEditing, setIsEditing] = useState(false)
+  const [editTitle, setEditTitle] = useState(video.title)
+  const [editTag, setEditTag] = useState(video.tag)
+  
   useEffect(() => {
     vidRef.current?.play().catch(() => {})
     const onKey = (e) => { if (e.key === 'Escape') onClose() }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose])
+
+  const handleSaveEdit = async () => {
+    if (!editTitle || !editTag) return
+    try {
+      await onEdit(video._id || video.videoId || video.id, editTitle, editTag)
+      setIsEditing(false)
+    } catch (error) {
+      console.error('Error saving edit:', error)
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!window.confirm('Delete this video?')) return
+    try {
+      await onDelete(video._id || video.videoId || video.id)
+      onClose()
+    } catch (error) {
+      console.error('Error deleting video:', error)
+    }
+  }
+  
   return (
     <div
       className="fixed inset-0 z-[950] flex items-center justify-center p-8 bg-[#050508]/96 backdrop-blur-2xl"
@@ -188,17 +214,72 @@ function VideoPlayer({ video, onClose }) {
         <video ref={vidRef} className="w-full block" style={{ aspectRatio: '16/9', objectFit: 'cover' }}
           src={video.src} controls playsInline />
         <div className="flex items-center justify-between gap-6 px-6 py-4 bg-white/[.03] border-x border-b border-white/[.07]">
-          <div>
-            <div className="text-[8px] font-bold tracking-[.38em] uppercase mb-1"
-              style={{ ...syne, color: video.color }}>{video.tag}</div>
-            <div className="text-[18px] font-bold text-[#F0EAD6]/90" style={syne}>{video.title}</div>
+          <div className="flex-1">
+            {isEditing ? (
+              <div className="space-y-2">
+                <input
+                  type="text"
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  className="w-full bg-[#0a0a0d] border rounded px-2 py-1 text-sm text-white"
+                  style={{ borderColor: `rgba(${video.rgb},.3)` }}
+                />
+                <input
+                  type="text"
+                  value={editTag}
+                  onChange={(e) => setEditTag(e.target.value)}
+                  className="w-full bg-[#0a0a0d] border rounded px-2 py-1 text-xs text-white"
+                  style={{ borderColor: `rgba(${video.rgb},.3)` }}
+                />
+              </div>
+            ) : (
+              <>
+                <div className="text-[8px] font-bold tracking-[.38em] uppercase mb-1"
+                  style={{ ...syne, color: video.color }}>{editTag}</div>
+                <div className="text-[18px] font-bold text-[#F0EAD6]/90" style={syne}>{editTitle}</div>
+              </>
+            )}
           </div>
-          <button onClick={onClose}
-            className="text-[9px] font-bold tracking-[.28em] uppercase border px-5 py-2.5 transition-all duration-200"
-            style={{ ...syne, borderColor: 'rgba(255,255,255,.12)', color: 'rgba(240,234,214,.4)', background: 'transparent' }}
-            onMouseEnter={(e) => { e.currentTarget.style.borderColor = video.color; e.currentTarget.style.color = video.color }}
-            onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,.12)'; e.currentTarget.style.color = 'rgba(240,234,214,.4)' }}
-          >✕ Close</button>
+          <div className="flex items-center gap-2">
+            {token && (
+              <>
+                {isEditing ? (
+                  <>
+                    <button onClick={handleSaveEdit}
+                      className="text-[9px] font-bold tracking-[.28em] uppercase border px-3 py-2.5 transition-all duration-200"
+                      style={{ ...syne, borderColor: video.color, color: video.color, background: 'transparent' }}>
+                      ✓ Save
+                    </button>
+                    <button onClick={() => setIsEditing(false)}
+                      className="text-[9px] font-bold tracking-[.28em] uppercase border px-3 py-2.5 transition-all duration-200"
+                      style={{ ...syne, borderColor: 'rgba(255,255,255,.12)', color: 'rgba(240,234,214,.4)', background: 'transparent' }}>
+                      Cancel
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button onClick={() => setIsEditing(true)}
+                      className="text-[9px] font-bold tracking-[.28em] uppercase border px-3 py-2.5 transition-all duration-200"
+                      style={{ ...syne, borderColor: `rgba(${video.rgb},.3)`, color: video.color, background: 'transparent' }}>
+                      ✎ Edit
+                    </button>
+                    <button onClick={handleDelete}
+                      className="text-[9px] font-bold tracking-[.28em] uppercase border px-3 py-2.5 transition-all duration-200"
+                      style={{ ...syne, borderColor: 'rgba(255,0,0,.3)', color: '#ff6b6b', background: 'transparent' }}>
+                      🗑 Delete
+                    </button>
+                  </>
+                )}
+              </>
+            )}
+            <button onClick={onClose}
+              className="text-[9px] font-bold tracking-[.28em] uppercase border px-5 py-2.5 transition-all duration-200"
+              style={{ ...syne, borderColor: 'rgba(255,255,255,.12)', color: 'rgba(240,234,214,.4)', background: 'transparent' }}
+              onMouseEnter={(e) => { e.currentTarget.style.borderColor = video.color; e.currentTarget.style.color = video.color }}
+              onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,.12)'; e.currentTarget.style.color = 'rgba(240,234,214,.4)' }}>
+              ✕ Close
+            </button>
+          </div>
         </div>
         <div className="absolute bottom-0 right-0 w-7 h-7"
           style={{ borderBottom: '1px solid rgba(168,85,247,.5)', borderRight: '1px solid rgba(168,85,247,.5)' }} />
@@ -207,14 +288,153 @@ function VideoPlayer({ video, onClose }) {
   )
 }
 
+// ── Add Video Modal ────────────────────────────────────────────────
+function AddVideoModal({ chapterKey, chapterColor, chapterRgb, onClose, token, onAdd }) {
+  const [title, setTitle] = useState('')
+  const [tag, setTag] = useState('')
+  const [videoFile, setVideoFile] = useState(null)
+  const [loading, setLoading] = useState(false)
+  const videoInputRef = useRef(null)
+
+  const handleAddVideo = async () => {
+    if (!title || !tag || !videoFile) {
+      alert('Please fill in all fields and select a video')
+      return
+    }
+
+    setLoading(true)
+    try {
+      const reader = new FileReader()
+      reader.onload = async (e) => {
+        const videoData = e.target.result
+        // Generate unique videoId from title and timestamp
+        const videoId = `${title.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}`
+        
+        const res = await fetch('/api/videos', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            videoId,
+            title,
+            tag,
+            src: videoData,
+            chapter: chapterKey,
+            duration: '00:00',
+            color: chapterColor,
+            rgb: chapterRgb,
+          }),
+        })
+
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        const data = await res.json()
+        if (data.success) {
+          setTitle('')
+          setTag('')
+          setVideoFile(null)
+          if (videoInputRef.current) videoInputRef.current.value = ''
+          await onAdd()
+          onClose()
+        }
+      }
+      reader.readAsDataURL(videoFile)
+    } catch (error) {
+      console.error('Error adding video:', error)
+      alert('Error adding video')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-[951] flex items-center justify-center p-8 bg-[#050508]/96 backdrop-blur-2xl"
+      onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="relative w-full max-w-md">
+        <div className="bg-white/[.03] border border-white/[.07] p-8">
+          <h2 className="text-2xl font-bold mb-6" style={{ ...bebasNeue, color: chapterColor }}>ADD VIDEO</h2>
+          
+          <div className="space-y-4">
+            <div>
+              <label className="block text-[10px] font-bold tracking-[.3em] uppercase text-[#F0EAD6]/60 mb-2" style={syne}>Title</label>
+              <input
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="w-full bg-[#0a0a0d] border rounded px-3 py-2 text-white"
+                style={{ borderColor: `rgba(${chapterRgb},.3)` }}
+                placeholder="Enter video title"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[10px] font-bold tracking-[.3em] uppercase text-[#F0EAD6]/60 mb-2" style={syne}>Tag</label>
+              <input
+                type="text"
+                value={tag}
+                onChange={(e) => setTag(e.target.value)}
+                className="w-full bg-[#0a0a0d] border rounded px-3 py-2 text-white"
+                style={{ borderColor: `rgba(${chapterRgb},.3)` }}
+                placeholder="Enter tag (e.g., 'Build', 'Demo')"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[10px] font-bold tracking-[.3em] uppercase text-[#F0EAD6]/60 mb-2" style={syne}>Video File</label>
+              <input
+                ref={videoInputRef}
+                type="file"
+                accept="video/*"
+                onChange={(e) => setVideoFile(e.target.files?.[0] || null)}
+                className="w-full bg-[#0a0a0d] border rounded px-3 py-2 text-white text-sm"
+                style={{ borderColor: `rgba(${chapterRgb},.3)` }}
+              />
+              {videoFile && <p className="text-[10px] text-[#F0EAD6]/50 mt-2">Selected: {videoFile.name}</p>}
+            </div>
+          </div>
+
+          <div className="flex gap-3 mt-8">
+            <button
+              onClick={handleAddVideo}
+              disabled={loading}
+              className="flex-1 text-[9px] font-bold tracking-[.28em] uppercase border px-4 py-2.5 transition-all"
+              style={{
+                ...syne,
+                borderColor: chapterColor,
+                color: 'white',
+                background: chapterColor,
+                opacity: loading ? 0.5 : 1,
+              }}>
+              {loading ? '⟳ Adding...' : '✓ Add Video'}
+            </button>
+            <button
+              onClick={onClose}
+              className="flex-1 text-[9px] font-bold tracking-[.28em] uppercase border px-4 py-2.5 transition-all"
+              style={{
+                ...syne,
+                borderColor: 'rgba(255,255,255,.12)',
+                color: 'rgba(240,234,214,.4)',
+                background: 'transparent',
+              }}>
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── View All Modal ─────────────────────────────────────────────────
-function ViewAllModal({ videos, chapter, chapterColor, chapterRgb, onClose }) {
+function ViewAllModal({ videos, chapter, chapterKey, chapterColor, chapterRgb, onClose, token, onEdit, onDelete, onAdd }) {
   const [playerVideo, setPlayerVideo] = useState(null)
+  const [showAddModal, setShowAddModal] = useState(false)
   useEffect(() => {
-    const onKey = (e) => { if (e.key === 'Escape') { if (playerVideo) setPlayerVideo(null); else onClose() } }
+    const onKey = (e) => { if (e.key === 'Escape') { if (playerVideo) setPlayerVideo(null); else if (showAddModal) setShowAddModal(false); else onClose() } }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [onClose, playerVideo])
+  }, [onClose, playerVideo, showAddModal])
 
   return (
     <div className="fixed inset-0 z-[900] flex flex-col bg-[#050508]/97 backdrop-blur-2xl overflow-hidden"
@@ -255,6 +475,14 @@ function ViewAllModal({ videos, chapter, chapterColor, chapterRgb, onClose }) {
             <span className="text-[11px] font-light text-[#F0EAD6]/30 tracking-[.04em]" style={dmSans}>
               {videos.length} recordings
             </span>
+            {token && (
+              <button onClick={() => setShowAddModal(true)}
+                className="text-[9px] font-bold tracking-[.28em] uppercase border px-4 py-2.5 transition-all duration-200"
+                style={{ ...syne, borderColor: chapterColor, color: 'white', background: chapterColor }}
+                onMouseEnter={(e) => { e.currentTarget.style.filter = 'brightness(1.15)' }}
+                onMouseLeave={(e) => { e.currentTarget.style.filter = 'none' }}
+              >+ Add Video</button>
+            )}
             <button onClick={onClose}
               className="text-[9px] font-bold tracking-[.28em] uppercase border px-6 py-2.5 transition-all duration-200"
               style={{ ...syne, borderColor: 'rgba(255,255,255,.12)', color: 'rgba(240,234,214,.4)', background: 'transparent' }}
@@ -277,7 +505,8 @@ function ViewAllModal({ videos, chapter, chapterColor, chapterRgb, onClose }) {
         </div>
       </div>
 
-      {playerVideo && <VideoPlayer video={playerVideo} onClose={() => setPlayerVideo(null)} />}
+      {playerVideo && <VideoPlayer video={playerVideo} onClose={() => setPlayerVideo(null)} token={token} onEdit={onEdit} onDelete={onDelete} />}
+      {showAddModal && <AddVideoModal chapterKey={chapterKey} chapterColor={chapterColor} chapterRgb={chapterRgb} onClose={() => setShowAddModal(false)} token={token} onAdd={onAdd} />}
     </div>
   )
 }
@@ -292,7 +521,12 @@ export default function ChapterVideoGallery({
   chapterColor   = '#FF6B35',
   chapterRgb     = '255,107,53',
   stats          = [],
+  chapterKey,
 }) {
+  const { token } = useOwnerAuth()
+  const [displayVideos, setDisplayVideos] = useState(videos)
+  const [loading, setLoading] = useState(false)
+  const [refreshKey, setRefreshKey] = useState(0)
   const [showAll,    setShowAll]    = useState(false)
   const [modalVideo, setModalVideo] = useState(null)
 
@@ -300,8 +534,87 @@ export default function ChapterVideoGallery({
   const posRef    = useRef(0)
   const pausedRef = useRef(false)
   const rafRef    = useRef(null)
-  const loopWidth = videos.length * STEP
-  const doubled   = [...videos, ...videos]
+  const loopWidth = displayVideos.length * STEP
+  const doubled   = [...displayVideos, ...displayVideos]
+
+  // Fetch videos from API if chapterKey provided
+  useEffect(() => {
+    if (chapterKey) {
+      const fetchVideos = async () => {
+        try {
+          setLoading(true)
+          const res = await fetch(`/api/videos/chapter/${chapterKey}`)
+          const data = await res.json()
+          if (data.success) {
+            setDisplayVideos(data.videos)
+          } else {
+            setDisplayVideos(videos)
+          }
+        } catch (error) {
+          console.error('Error fetching videos:', error)
+          setDisplayVideos(videos)
+        } finally {
+          setLoading(false)
+        }
+      }
+      fetchVideos()
+    }
+  }, [chapterKey, videos, refreshKey])
+
+  const handleVideosUpdate = () => {
+    setRefreshKey(prev => prev + 1)
+  }
+
+  const handleEditVideo = async (videoId, title, tag) => {
+    try {
+      const res = await fetch(`/api/videos/${videoId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ title, tag }),
+      })
+
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`)
+      }
+
+      const data = await res.json()
+      if (data.success) {
+        handleVideosUpdate()
+      }
+    } catch (error) {
+      console.error('Error editing video:', error)
+      alert('Error editing video')
+    }
+  }
+
+  const handleDeleteVideo = async (videoId) => {
+    try {
+      const res = await fetch(`/api/videos/${videoId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` },
+      })
+
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`)
+      }
+
+      const data = await res.json()
+      if (data.success) {
+        setModalVideo(null)
+        handleVideosUpdate()
+      }
+    } catch (error) {
+      console.error('Error deleting video:', error)
+      alert('Error deleting video')
+    }
+  }
+
+  const handleAddVideo = async () => {
+    handleVideosUpdate()
+  }
 
   const animate = useCallback(() => {
     if (!pausedRef.current && trackRef.current) {
@@ -408,7 +721,7 @@ export default function ChapterVideoGallery({
             {/* Right — counter + nav + view all */}
             <div className="flex flex-col items-end gap-4">
               <span className="text-[10px] font-light text-[#F0EAD6]/25 tracking-[.06em]" style={dmSans}>
-                {videos.length} recordings in chapter
+                {displayVideos.length} recordings in chapter
               </span>
               <div className="flex items-center gap-3">
                 {/* Prev */}
@@ -520,15 +833,20 @@ export default function ChapterVideoGallery({
       {/* Modals */}
       {showAll && (
         <ViewAllModal
-          videos={videos}
+          videos={displayVideos}
           chapter={chapter}
+          chapterKey={chapterKey}
           chapterColor={chapterColor}
           chapterRgb={chapterRgb}
           onClose={() => setShowAll(false)}
+          token={token}
+          onEdit={handleEditVideo}
+          onDelete={handleDeleteVideo}
+          onAdd={handleAddVideo}
         />
       )}
       {modalVideo && (
-        <VideoPlayer video={modalVideo} onClose={() => setModalVideo(null)} />
+        <VideoPlayer video={modalVideo} onClose={() => setModalVideo(null)} token={token} onEdit={handleEditVideo} onDelete={handleDeleteVideo} />
       )}
     </>
   )
