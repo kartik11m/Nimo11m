@@ -86,10 +86,13 @@ export default function ScrollVideoSection2() {
   useEffect(() => {
     const fetchVideo = async () => {
       try {
-        const res = await fetch('/api/videos/chapter-two')
+        const res = await fetch('/api/videos/page/chapter-two')
         if (res.ok) {
           const data = await res.json()
-          setVideoUrl(data.url)
+          if (data.success && data.videos && data.videos.length > 0) {
+            // Use base64 src data from first video
+            setVideoUrl(data.videos[0].src)
+          }
         }
       } catch (err) {
         console.error('Error fetching video:', err)
@@ -99,10 +102,11 @@ export default function ScrollVideoSection2() {
   }, [])
 
   const handleVideoUploadSuccess = (videoData) => {
-    setVideoUrl(videoData.url)
+    // Use base64 src data from uploaded video
+    setVideoUrl(videoData.src)
     const video = videoRef.current
     if (video) {
-      video.src = videoData.url
+      video.src = videoData.src
       video.load()
     }
   }
