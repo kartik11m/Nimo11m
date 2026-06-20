@@ -135,3 +135,73 @@ exports.deleteVideo = async (req, res) => {
     res.status(500).json({ success: false, message: 'Error deleting video' })
   }
 }
+
+// Upload video (multipart form-data)
+exports.uploadVideo = async (req, res) => {
+  try {
+    console.log('uploadVideo called')
+    console.log('req.body:', req.body)
+    console.log('req.file:', req.file ? { filename: req.file.filename, mimetype: req.file.mimetype, size: req.file.size } : 'No file')
+    
+    const { sectionId } = req.body
+    const file = req.file
+
+    if (!file) {
+      console.error('No file provided')
+      return res.status(400).json({
+        success: false,
+        message: 'No video file provided',
+      })
+    }
+
+    if (!sectionId) {
+      console.error('No sectionId provided')
+      return res.status(400).json({
+        success: false,
+        message: 'sectionId is required',
+      })
+    }
+
+    // Convert file buffer to base64
+    const base64Data = file.buffer.toString('base64')
+    const base64String = `data:${file.mimetype};base64,${base64Data}`
+
+    // Generate unique videoId
+    const videoId = `${sectionId}-${Date.now()}`
+
+    // Try to find existing video for this section and update it
+    let video = await Video.findOne({ page: sectionId })
+    
+    if (video) {
+      // Update existing video
+      console.log('Updating existing video:', videoId)
+      video.src = base64String
+      video.updatedAt = new Date()
+      await video.save()
+    } else {
+      // Create new video - use 'ch1' as default chapter for scroll sections
+      console.log('Creating new video:', videoId)
+      video = new Video({
+        videoId,
+        src: base64String,
+        title: `${sectionId} Video`,
+        tag: 'Section',
+        chapter: 'ch1', // Use ch1 as default, store sectionId in page field
+        page: sectionId,
+        duration: '0:00',
+        color: '#FF6B35',
+        rgb: '255,107,53',
+        order: 0,
+      })
+      await video.save()
+    }
+
+    console.log('Video saved successfully:', { videoId, page: sectionId })
+    res.status(201).json({ success: true, video })
+  } catch (error) {
+    console.error('Error uploading video:', error.message)
+    console.error('Error stack:', error.stack)
+    console.error('Request body:', req.body)
+    res.status(500).json({ success: false, message: 'Error uploading video', error: error.message })
+  }
+}
