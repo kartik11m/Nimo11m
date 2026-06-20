@@ -34,6 +34,7 @@ const initializePhotos = require('./utils/initializePhotos')
 const initializeVideos = require('./utils/initializeVideos')
 const initializeChapters = require('./utils/initializeChapters')
 const initializeCourses = require('./utils/initializeCourses')
+const initializeEvents = require('./utils/initializeEvents')
 
 connectDB()
 
@@ -61,6 +62,11 @@ setTimeout(() => {
 setTimeout(() => {
   initializeCourses()
 }, 3000)
+
+// ── Initialize Events ─────────────────────────────────────────
+setTimeout(() => {
+  initializeEvents()
+}, 3500)
 
 // ── API Routes ────────────────────────────────────────────────
 app.use('/api', require('./routes/index'))
