@@ -24,13 +24,14 @@ app.use(cors({
   },
   credentials: true,
 }))
-app.use(express.json())
-app.use(express.urlencoded({ extended: true }))
+app.use(express.json({ limit: '500mb' }))
+app.use(express.urlencoded({ extended: true, limit: '500mb' }))
 
 // ── Database Connection ───────────────────────────────────────
 const connectDB = require('./config/database')
 const initializeOwner = require('./utils/initializeOwner')
 const initializePhotos = require('./utils/initializePhotos')
+const initializeVideos = require('./utils/initializeVideos')
 
 connectDB()
 
@@ -43,6 +44,11 @@ setTimeout(() => {
 setTimeout(() => {
   initializePhotos.initializePhotos()
 }, 1500)
+
+// ── Initialize Default Videos ─────────────────────────────────
+setTimeout(() => {
+  initializeVideos.initializeVideos()
+}, 2000)
 
 // ── API Routes ────────────────────────────────────────────────
 app.use('/api', require('./routes/index'))
