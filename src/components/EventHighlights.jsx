@@ -1,4 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
 // ── Countdown hook ────────────────────────────────────────────────
 function useCountdown(target) {
@@ -16,73 +18,20 @@ function useCountdown(target) {
   const [t, setT] = useState(calc)
   useEffect(() => {
     if (!target) return
+    setT(calc())
     const id = setInterval(() => setT(calc()), 1000)
     return () => clearInterval(id)
-  }, []) // eslint-disable-line
+  }, [target])
   return t
 }
 
-// ── Data ─────────────────────────────────────────────────────────
-const FEATURED = {
-  type:       'Workshop',
-  typeClass:  'text-brand-orange border-brand-orange/30 bg-brand-orange/[.07]',
-  status:     'Open',
-  statusClass:'text-[#4ade80] border-[#4ade80]/30 bg-[#4ade80]/[.06]',
-  title:      'Arduino for Absolute Beginners',
-  sub:        'Build your first robot in a single day — no experience needed.',
-  day:        '18',
-  month:      'MAY',
-  year:       '2025',
-  time:       '10:00 AM – 4:00 PM',
-  venue:      'Nimo Labs HQ, Bhopal',
-  seats:      20,
-  filled:     13,
-  price:      '₹999',
-  accent:     '#FF6230',
-  target:     new Date('2025-05-18T10:00:00'),
+// ── Type styles ──────────────────────────────────────────────────
+const TYPE_STYLES = {
+  'Workshop': { accent: '#FF6230', text: 'text-brand-orange', border: 'border-brand-orange/30', bg: 'bg-brand-orange/[.07]' },
+  'Summer Camp': { accent: '#00DFFF', text: 'text-brand-cyan', border: 'border-brand-cyan/30', bg: 'bg-brand-cyan/[.06]' },
+  'Competition': { accent: '#E0357A', text: 'text-brand-pink', border: 'border-brand-pink/30', bg: 'bg-brand-pink/[.06]' },
+  'School Visit': { accent: '#8B31E8', text: 'text-brand-purple', border: 'border-brand-purple/30', bg: 'bg-brand-purple/[.06]' },
 }
-
-const UPCOMING = [
-  {
-    id: 'e2',
-    type: 'Summer Camp',
-    typeClass: 'text-brand-cyan border-brand-cyan/30 bg-brand-cyan/[.06]',
-    status: 'Filling Fast',
-    statusClass: 'text-brand-orange border-brand-orange/30 bg-brand-orange/[.07]',
-    title: 'Robotics Summer Camp 2025',
-    day: '02', month: 'JUN',
-    venue: 'Nimo Labs HQ, Bhopal',
-    seats: 40, filled: 28,
-    accent: '#00DFFF',
-    price: '₹3,499',
-  },
-  {
-    id: 'e3',
-    type: 'Workshop',
-    typeClass: 'text-brand-orange border-brand-orange/30 bg-brand-orange/[.07]',
-    status: 'Open',
-    statusClass: 'text-[#4ade80] border-[#4ade80]/30 bg-[#4ade80]/[.06]',
-    title: 'ESP32 & IoT Masterclass',
-    day: '22', month: 'JUN',
-    venue: 'Nimo Labs HQ, Bhopal',
-    seats: 15, filled: 5,
-    accent: '#FF6230',
-    price: '₹1,299',
-  },
-  {
-    id: 'e4',
-    type: 'Competition',
-    typeClass: 'text-brand-pink border-brand-pink/30 bg-brand-pink/[.06]',
-    status: 'Coming Soon',
-    statusClass: 'text-white/35 border-white/[.12] bg-white/[.03]',
-    title: 'NimoBot Challenge 2025',
-    day: '15', month: 'AUG',
-    venue: 'TBA — Bhopal City',
-    seats: 60, filled: 0,
-    accent: '#E0357A',
-    price: '₹499/team',
-  },
-]
 
 // ── Countdown unit box ────────────────────────────────────────────
 function CDUnit({ value, label }) {
@@ -107,6 +56,18 @@ function CDUnit({ value, label }) {
 
 // ── Mini event card ───────────────────────────────────────────────
 function MiniCard({ event }) {
+  const ts = TYPE_STYLES[event.type] || TYPE_STYLES['Workshop']
+  
+  const getStatusClass = (status) => {
+    const statusMap = {
+      'Open': 'text-[#4ade80] border-[#4ade80]/30 bg-[#4ade80]/[.06]',
+      'Filling Fast': 'text-brand-orange border-brand-orange/30 bg-brand-orange/[.07]',
+      'Booking Open': 'text-brand-cyan border-brand-cyan/30 bg-brand-cyan/[.06]',
+      'Coming Soon': 'text-white/35 border-white/[.12] bg-white/[.03]',
+    }
+    return statusMap[status] || statusMap['Open']
+  }
+
   const pct = event.seats < 900 ? Math.round((event.filled / event.seats) * 100) : 5
   return (
     <div className="group relative flex flex-col bg-white/[.025] border border-white/[.07] hover:border-brand-orange/30 hover:-translate-y-1 hover:shadow-[0_6px_28px_rgba(255,98,48,.09)] transition-all duration-300 p-5">
@@ -117,24 +78,24 @@ function MiniCard({ event }) {
       {/* Top accent on hover */}
       <div
         className="absolute top-0 left-0 right-0 h-[1.5px] opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-        style={{ background: `linear-gradient(90deg,${event.accent},#E0357A,transparent)` }}
+        style={{ background: `linear-gradient(90deg,${ts.accent},#E0357A,transparent)` }}
       />
 
       {/* Date + Type row */}
       <div className="flex items-start justify-between mb-3">
         <div>
-          <div className="font-display leading-none mb-0.5" style={{ fontSize: '2.2rem', color: event.accent }}>
+          <div className="font-display leading-none mb-0.5" style={{ fontSize: '2.2rem', color: ts.accent }}>
             {event.day}
           </div>
-          <div className="font-condensed font-normal text-[8px] tracking-[.32em] uppercase" style={{ color: event.accent }}>
+          <div className="font-condensed font-normal text-[8px] tracking-[.32em] uppercase" style={{ color: ts.accent }}>
             {event.month}
           </div>
         </div>
         <div className="flex flex-col items-end gap-1.5">
-          <span className={`font-condensed font-normal text-[7px] tracking-[.3em] uppercase border px-2 py-0.5 ${event.typeClass}`}>
+          <span className={`font-condensed font-normal text-[7px] tracking-[.3em] uppercase border px-2 py-0.5 ${ts.text} ${ts.border} ${ts.bg}`}>
             {event.type}
           </span>
-          <span className={`font-condensed font-normal text-[7px] tracking-[.3em] uppercase border px-2 py-0.5 ${event.statusClass}`}>
+          <span className={`font-condensed font-normal text-[7px] tracking-[.3em] uppercase border px-2 py-0.5 ${getStatusClass(event.status)}`}>
             {event.status}
           </span>
         </div>
@@ -150,7 +111,7 @@ function MiniCard({ event }) {
 
       {/* Venue */}
       <div className="flex items-center gap-1.5 mb-3">
-        <span className="w-[4px] h-[4px] rounded-full bg-brand-orange/60 shrink-0" />
+        <span className="w-[4px] h-[4px] rounded-full shrink-0" style={{ background: `${ts.accent}60` }} />
         <span className="font-condensed font-normal text-[8.5px] tracking-[.22em] uppercase text-white/32 truncate">
           {event.venue}
         </span>
@@ -161,19 +122,19 @@ function MiniCard({ event }) {
         <div className="mb-3">
           <div className="flex justify-between mb-1">
             <span className="font-condensed font-normal text-[7px] tracking-[.3em] uppercase text-white/22">Seats</span>
-            <span className="font-condensed font-normal text-[8px]" style={{ color: event.accent }}>
+            <span className="font-condensed font-normal text-[8px]" style={{ color: ts.accent }}>
               {event.seats - event.filled} left
             </span>
           </div>
           <div className="h-px bg-white/[.07] overflow-hidden">
-            <div className="h-full" style={{ width: `${pct}%`, background: `linear-gradient(90deg,${event.accent},#E0357A)` }} />
+            <div className="h-full" style={{ width: `${pct}%`, background: `linear-gradient(90deg,${ts.accent},#E0357A)` }} />
           </div>
         </div>
       )}
 
       {/* Price + Register */}
       <div className="flex items-center justify-between mt-auto">
-        <span className="font-condensed font-normal text-[11px] tracking-[.04em]" style={{ color: event.accent }}>
+        <span className="font-condensed font-normal text-[11px] tracking-[.04em]" style={{ color: ts.accent }}>
           {event.price}
         </span>
         <a
@@ -193,8 +154,49 @@ function MiniCard({ event }) {
 
 // ── Main section ──────────────────────────────────────────────────
 export default function EventsPreviewSection() {
-  const { days, hours, mins, secs } = useCountdown(FEATURED.target)
-  const pct = Math.round((FEATURED.filled / FEATURED.seats) * 100)
+  const [featured, setFeatured] = useState(null)
+  const [upcoming, setUpcoming] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  // Call hooks unconditionally first
+  const ts = featured ? (TYPE_STYLES[featured.type] || TYPE_STYLES['Workshop']) : TYPE_STYLES['Workshop']
+  const targetDate = useMemo(() => featured?.target ? new Date(featured.target) : null, [featured?.target])
+  const { days, hours, mins, secs } = useCountdown(targetDate)
+  const pct = featured ? Math.round((featured.filled / featured.seats) * 100) : 0
+
+  // Fetch events from API
+  useEffect(() => {
+    const fetchEvents = async () => {
+      try {
+        const res = await fetch(`${API_URL}/events/upcoming`)
+        const data = await res.json()
+        if (data.success) {
+          const events = data.events.sort((a, b) => a.order - b.order)
+          const feat = events.find(e => e.featured)
+          const upcoming = events.filter(e => !e.featured).slice(0, 3)
+          setFeatured(feat)
+          setUpcoming(upcoming)
+        }
+      } catch (error) {
+        console.error('Error fetching events:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchEvents()
+  }, [])
+
+  // Helper function to get status color class
+  const getStatusClass = (status) => {
+    const statusMap = {
+      'Open': 'text-[#4ade80] border-[#4ade80]/30 bg-[#4ade80]/[.06]',
+      'Filling Fast': 'text-brand-orange border-brand-orange/30 bg-brand-orange/[.07]',
+      'Booking Open': 'text-brand-cyan border-brand-cyan/30 bg-brand-cyan/[.06]',
+      'Coming Soon': 'text-white/35 border-white/[.12] bg-white/[.03]',
+    }
+    return statusMap[status] || statusMap['Open']
+  }
 
   useEffect(() => {
     const link = document.createElement('link')
@@ -270,65 +272,69 @@ export default function EventsPreviewSection() {
         </div>
 
         {/* ── Featured event (full-width spotlight) ── */}
-        <div className="relative border border-brand-orange/30 bg-white/[.02] flex flex-wrap lg:flex-nowrap mb-6">
+        {featured && (
+        <div className="relative border flex flex-wrap lg:flex-nowrap mb-6"
+          style={{ borderColor: `${ts.accent}30`, background: `${ts.accent}05` }}>
           {/* Top accent line */}
           <div className="absolute top-0 left-0 right:0 right-0 h-[1.5px]"
-            style={{ background: 'linear-gradient(90deg,#FF6230,#E0357A,#8B31E8,transparent)' }} />
-          <div className="absolute top-0 left-0 w-5 h-5 border-t-2 border-l-2 border-brand-orange" />
-          <div className="absolute bottom-0 right-0 w-5 h-5 border-b-2 border-r-2 border-brand-purple/50" />
+            style={{ background: `linear-gradient(90deg,${ts.accent},#E0357A,#8B31E8,transparent)` }} />
+          <div className="absolute top-0 left-0 w-5 h-5 border-t-2 border-l-2" style={{ borderColor: ts.accent }} />
+          <div className="absolute bottom-0 right-0 w-5 h-5 border-b-2 border-r-2" style={{ borderColor: `${ts.accent}80` }} />
 
           {/* NEXT badge */}
-          <div className="absolute top-3 right-4 flex items-center gap-2 px-3 py-1.5 bg-brand-orange/[.1] border border-brand-orange/28">
-            <span className="w-1.5 h-1.5 rounded-full bg-brand-orange animate-pulse" />
-            <span className="font-condensed font-normal text-[7.5px] tracking-[.38em] uppercase text-brand-orange">
-              Up Next
+          <div className="absolute top-3 right-4 flex items-center gap-2 px-3 py-1.5" style={{ background: `${ts.accent}10`, borderColor: `${ts.accent}28` }}>
+            <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: ts.accent }} />
+            <span className="font-condensed font-normal text-[7.5px] tracking-[.38em] uppercase" style={{ color: ts.accent }}>
+              Featured
             </span>
           </div>
 
           {/* Left: date + countdown */}
           <div
             className="lg:w-[260px] shrink-0 flex flex-col items-center justify-center gap-5 p-8 border-b lg:border-b-0 lg:border-r border-white/[.06]"
-            style={{ background: 'radial-gradient(ellipse at 50% 40%,rgba(255,98,48,.09) 0%,transparent 70%)' }}
+            style={{ background: `radial-gradient(ellipse at 50% 40%,${ts.accent}09 0%,transparent 70%)` }}
           >
             <div className="text-center">
               <div className="font-display leading-none text-white/92 tabular-nums"
-                style={{ fontSize: '4.5rem' }}>{FEATURED.day}</div>
-              <div className="font-condensed font-normal text-[10px] tracking-[.4em] uppercase text-brand-orange mt-1">
-                {FEATURED.month}
+                style={{ fontSize: '4.5rem' }}>{featured.day}</div>
+              <div className="font-condensed font-normal text-[10px] tracking-[.4em] uppercase mt-1" style={{ color: ts.accent }}>
+                {featured.month}
               </div>
               <div className="font-condensed font-normal text-[8px] tracking-[.28em] text-white/25 mt-0.5">
-                {FEATURED.year}
+                {featured.year}
               </div>
             </div>
 
-            <div className="w-8 h-px" style={{ background: 'linear-gradient(to right,transparent,#FF6230,transparent)' }} />
+            <div className="w-8 h-px" style={{ background: `linear-gradient(to right,transparent,${ts.accent},transparent)` }} />
 
             {/* Countdown */}
-            <div>
-              <div className="font-condensed font-normal text-[7px] tracking-[.42em] uppercase text-white/28 text-center mb-2.5">
-                Starts In
+            {featured.target && (
+              <div>
+                <div className="font-condensed font-normal text-[7px] tracking-[.42em] uppercase text-white/28 text-center mb-2.5">
+                  Starts In
+                </div>
+                <div className="flex items-end gap-2">
+                  <CDUnit value={days}  label="Days" />
+                  <CDUnit value={hours} label="Hrs"  />
+                  <CDUnit value={mins}  label="Min"  />
+                  <CDUnit value={secs}  label="Sec"  />
+                </div>
               </div>
-              <div className="flex items-end gap-2">
-                <CDUnit value={days}  label="Days" />
-                <CDUnit value={hours} label="Hrs"  />
-                <CDUnit value={mins}  label="Min"  />
-                <CDUnit value={secs}  label="Sec"  />
-              </div>
-            </div>
+            )}
           </div>
 
           {/* Right: details */}
           <div className="flex-1 p-7 flex flex-col gap-4 min-w-0">
             {/* Badges */}
             <div className="flex flex-wrap gap-2 items-center">
-              <span className={`font-condensed font-normal text-[7.5px] tracking-[.32em] uppercase border px-2.5 py-1 ${FEATURED.typeClass}`}>
-                {FEATURED.type}
+              <span className={`font-condensed font-normal text-[7.5px] tracking-[.32em] uppercase border px-2.5 py-1 ${ts.text} ${ts.border} ${ts.bg}`}>
+                {featured.type}
               </span>
-              <span className={`font-condensed font-normal text-[7.5px] tracking-[.32em] uppercase border px-2.5 py-1 ${FEATURED.statusClass}`}>
-                {FEATURED.status}
+              <span className={`font-condensed font-normal text-[7.5px] tracking-[.32em] uppercase border px-2.5 py-1 ${getStatusClass(featured.status)}`}>
+                {featured.status}
               </span>
-              <span className="font-condensed font-normal text-[9px] tracking-[.05em] text-brand-orange ml-1">
-                {FEATURED.price}
+              <span className="font-condensed font-normal text-[9px] tracking-[.05em] mt-1" style={{ color: ts.accent }}>
+                {featured.price}
               </span>
             </div>
 
@@ -338,22 +344,22 @@ export default function EventsPreviewSection() {
                 className="font-display text-white leading-[.9] mb-2"
                 style={{ fontSize: 'clamp(1.8rem,3.5vw,3rem)', letterSpacing: '.025em' }}
               >
-                {FEATURED.title}
+                {featured.title}
               </h3>
               <p className="font-condensed font-normal text-[10px] tracking-[.2em] uppercase text-brand-cyan">
-                {FEATURED.sub}
+                {featured.sub}
               </p>
             </div>
 
             {/* Gradient rule */}
             <div className="w-12 h-[1.5px]"
-              style={{ background: 'linear-gradient(to right,#FF6230,#E0357A,transparent)' }} />
+              style={{ background: `linear-gradient(to right,${ts.accent},#E0357A,transparent)` }} />
 
             {/* Meta */}
             <div className="flex flex-wrap gap-4">
               {[
-                { dot: '#FF6230', val: FEATURED.time },
-                { dot: '#8B31E8', val: FEATURED.venue },
+                { dot: ts.accent, val: featured.time },
+                { dot: '#8B31E8', val: featured.venue },
               ].map(({ dot, val }) => (
                 <div key={val} className="flex items-center gap-1.5">
                   <span className="w-[4px] h-[4px] rounded-full shrink-0" style={{ background: dot }} />
@@ -367,20 +373,23 @@ export default function EventsPreviewSection() {
               <div className="flex-1 min-w-[160px] max-w-[240px]">
                 <div className="flex justify-between mb-1.5">
                   <div className="flex items-center gap-1.5">
-                    <span className="w-1 h-1 rounded-full bg-brand-orange animate-pulse" />
+                    <span className="w-1 h-1 rounded-full animate-pulse" style={{ background: ts.accent }} />
                     <span className="font-condensed font-normal text-[7px] tracking-[.38em] uppercase text-white/28">Seats</span>
                   </div>
-                  <span className="font-condensed font-normal text-[9px] text-brand-orange">
-                    {FEATURED.seats - FEATURED.filled} / {FEATURED.seats} left
+                  <span className="font-condensed font-normal text-[9px]" style={{ color: ts.accent }}>
+                    {featured.seats - featured.filled} / {featured.seats} left
                   </span>
                 </div>
                 <div className="h-[2px] bg-white/[.07] overflow-hidden rounded-full">
                   <div className="h-full rounded-full"
-                    style={{ width: `${pct}%`, background: 'linear-gradient(90deg,#FF6230,#E0357A)', boxShadow: '0 0 8px rgba(255,98,48,.5)' }} />
+                    style={{ width: `${pct}%`, background: `linear-gradient(90deg,${ts.accent},#E0357A)`, boxShadow: `0 0 8px ${ts.accent}80` }} />
                 </div>
               </div>
               <div className="flex gap-3">
-                <button className="font-condensed font-normal text-[9px] tracking-[.4em] uppercase text-white bg-brand-orange border-none px-6 py-3 cursor-pointer shadow-[0_0_18px_rgba(255,98,48,.28)] hover:bg-[#ff7a4a] hover:shadow-[0_0_34px_rgba(255,98,48,.5)] hover:-translate-y-px transition-all duration-300">
+                <button className="font-condensed font-normal text-[9px] tracking-[.4em] uppercase text-white border-none px-6 py-3 cursor-pointer hover:-translate-y-px transition-all duration-300"
+                  style={{ background: ts.accent, boxShadow: `0 0 18px ${ts.accent}45`, color: 'white' }}
+                  onMouseEnter={(e) => e.currentTarget.style.boxShadow = `0 0 34px ${ts.accent}70`}
+                  onMouseLeave={(e) => e.currentTarget.style.boxShadow = `0 0 18px ${ts.accent}45`}>
                   Register Now →
                 </button>
                 <button className="font-condensed font-normal text-[9px] tracking-[.4em] uppercase text-white/38 bg-white/[.03] border border-white/[.1] px-6 py-3 cursor-pointer hover:border-brand-cyan hover:text-brand-cyan hover:bg-brand-cyan/[.04] transition-all duration-300">
@@ -390,11 +399,12 @@ export default function EventsPreviewSection() {
             </div>
           </div>
         </div>
+        )}
 
         {/* ── 3 upcoming cards ── */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-10">
-          {UPCOMING.map((ev) => (
-            <MiniCard key={ev.id} event={ev} />
+          {upcoming.map((ev) => (
+            <MiniCard key={ev.eventId} event={ev} />
           ))}
         </div>
 
