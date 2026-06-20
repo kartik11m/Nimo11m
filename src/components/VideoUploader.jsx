@@ -29,6 +29,8 @@ export default function VideoUploader({ sectionId, onUploadSuccess }) {
 
     try {
       const token = localStorage.getItem('ownerToken')
+      console.log('Starting upload:', { sectionId, fileName: file.name, fileSize: file.size, token: !!token })
+      
       const xhr = new XMLHttpRequest()
 
       xhr.upload.addEventListener('progress', (e) => {
@@ -39,13 +41,22 @@ export default function VideoUploader({ sectionId, onUploadSuccess }) {
       })
 
       xhr.addEventListener('load', () => {
-        if (xhr.status === 200) {
-          const response = JSON.parse(xhr.responseText)
-          if (response.success) {
-            alert('Video uploaded successfully!')
-            onUploadSuccess?.(response.video)
+        console.log('Upload response:', { status: xhr.status, statusText: xhr.statusText })
+        if (xhr.status === 200 || xhr.status === 201) {
+          try {
+            const response = JSON.parse(xhr.responseText)
+            if (response.success) {
+              alert('Video uploaded successfully!')
+              onUploadSuccess?.(response.video)
+            } else {
+              alert('Upload failed: ' + response.message)
+            }
+          } catch (parseError) {
+            console.error('Response parse error:', parseError)
+            alert('Upload failed: Invalid response from server')
           }
         } else {
+          console.error('Upload failed with status:', xhr.status, xhr.responseText)
           alert('Upload failed: ' + xhr.statusText)
         }
         setIsUploading(false)
@@ -54,13 +65,22 @@ export default function VideoUploader({ sectionId, onUploadSuccess }) {
       })
 
       xhr.addEventListener('error', () => {
+        console.error('Upload error event')
         alert('Upload error. Please try again.')
+        setIsUploading(false)
+        setUploadProgress(0)
+      })
+
+      xhr.addEventListener('abort', () => {
+        console.error('Upload aborted')
+        alert('Upload was cancelled.')
         setIsUploading(false)
         setUploadProgress(0)
       })
 
       xhr.open('POST', `${API_URL}/videos/upload`)
       xhr.setRequestHeader('Authorization', `Bearer ${token}`)
+      console.log('Sending upload request to:', `${API_URL}/videos/upload`)
       xhr.send(formData)
     } catch (error) {
       console.error('Upload error:', error)
