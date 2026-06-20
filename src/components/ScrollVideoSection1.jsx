@@ -31,10 +31,12 @@ export default function ScrollVideoSection1() {
   useEffect(() => {
     const fetchVideo = async () => {
       try {
-        const res = await fetch(`${API_URL}/videos/${videoKey}`)
+        const res = await fetch(`${API_URL}/videos/page/${videoKey}`)
         const data = await res.json()
-        if (data.success && data.video) {
-          setVideoUrl(data.video.url)
+        if (data.success && data.videos && data.videos.length > 0) {
+          const video = data.videos[0]
+          // Use base64 src data directly
+          setVideoUrl(video.src)
         }
       } catch (error) {
         console.error('Error fetching video:', error)
@@ -44,10 +46,11 @@ export default function ScrollVideoSection1() {
   }, [videoKey])
 
   const handleVideoUploadSuccess = (video) => {
-    setVideoUrl(video.url)
+    // Use base64 src data from uploaded video
+    setVideoUrl(video.src)
     // Reset video player
     if (videoRef.current) {
-      videoRef.current.src = video.url
+      videoRef.current.src = video.src
       videoRef.current.load()
     }
   }
