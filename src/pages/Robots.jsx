@@ -223,6 +223,7 @@ export default function RobotsPage() {
       <ChapterVideoGallery
         videos={nimoVideos.slice(0, 6)}
         chapter="Chapter One"
+        chapterKey="ch1"
         sectionTitle={['OUR BUILDS', 'SPEAK LOUDEST']}
         sectionSub="Chassis · Electronics · Firmware · Real Student Work"
         chapterColor="#FF6B35"
@@ -249,6 +250,7 @@ export default function RobotsPage() {
       <ChapterVideoGallery
         videos={nimoVideos.slice(4, 10)}
         chapter="Chapter Two"
+        chapterKey="ch2"
         sectionTitle={['WIRED IN,', 'SWITCHED ON']}
         sectionSub="Sensor Fusion · Wireless · IoT · Live Demos"
         chapterColor="#00F5FF"
@@ -275,6 +277,7 @@ export default function RobotsPage() {
       <ChapterVideoGallery
         videos={nimoVideos}
         chapter="Chapter Three"
+        chapterKey="ch3"
         sectionTitle={['INTELLIGENT.', 'AUTONOMOUS.']}
         sectionSub="Computer Vision · Path Planning · Edge AI · Capstone"
         chapterColor="#A855F7"
