@@ -1,10 +1,14 @@
-import { useEffect } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import ScrollVideoSection1   from '../components/ScrollVideoSection1'
 import ScrollVideoSection2   from '../components/ScrollVideoSection2'
 import ScrollVideoSection3   from '../components/ScrollVideoSection3'
 import ChapterVideoGallery   from '../components/ChapterVideoGallery'
 import ChapterPhotoGallery   from '../components/ChapterPhotoGallery'
+import ChapterHeader        from '../components/ChapterHeader'
+import AddChapterButton     from '../components/AddChapterButton'
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
 const bebasNeue = { fontFamily: "'Bebas Neue', sans-serif" }
 const syne      = { fontFamily: "'Syne', sans-serif" }
@@ -116,19 +120,35 @@ const nimoPhotos = [
   { id:'nimo-p32', src:'/Nimo-images/WhatsApp Image 2026-06-05 at 9.18.35 PM.jpeg', caption:'Final Product', tag:'Complete' },
 ]
 
-// ── Chapter divider label ──────────────────────────────────────────
-function ChapterDivider({ color, label }) {
-  return (
-    <div className="flex items-center gap-4 px-12 py-5 border-y border-white/[.055] bg-white/[.015]">
-      <div className="w-8 h-px flex-shrink-0" style={{ background: color }} />
-      <span className="text-[8px] font-bold tracking-[.45em] uppercase text-[#F0EAD6]/25" style={syne}>
-        {label}
-      </span>
-    </div>
-  )
-}
+
 
 export default function RobotsPage() {
+  const [chapters, setChapters] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  // Fetch chapters on mount
+  useEffect(() => {
+    const fetchChapters = async () => {
+      try {
+        const res = await fetch(`${API_URL}/chapters`)
+        const data = await res.json()
+        if (data.success) {
+          setChapters(data.chapters.sort((a, b) => a.order - b.order))
+        }
+      } catch (error) {
+        console.error('Error fetching chapters:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchChapters()
+  }, [])
+
+  // Handle chapter deletion from UI
+  const handleChapterDelete = useCallback((chapterId) => {
+    setChapters(chapters.filter(ch => ch.chapterId !== chapterId))
+  }, [chapters])
+
   useEffect(() => {
     const link = document.createElement('link')
     link.rel   = 'stylesheet'
@@ -217,86 +237,113 @@ export default function RobotsPage() {
         </div>
       </section>
 
-      {/* ══ CHAPTER 1 ════════════════════════════════════════════ */}
-      <ChapterDivider color="#FF6B35" label="Chapter One · Build · Chassis · Electronics · Firmware" />
-      <ScrollVideoSection1 />
-      <ChapterVideoGallery
-        videos={nimoVideos.slice(0, 6)}
-        chapter="Chapter One"
-        chapterKey="ch1"
-        sectionTitle={['OUR BUILDS', 'SPEAK LOUDEST']}
-        sectionSub="Chassis · Electronics · Firmware · Real Student Work"
-        chapterColor="#FF6B35"
-        chapterRgb="255,107,53"
-        stats={[
-          { num: '6', label: 'Build Videos', color: '#FF6B35' },
-          { num: '8', label: 'PCB Details', color: '#00F5FF' },
-          { num: '100%', label: 'Student-Made', color: '#A855F7' },
-        ]}
-      />
-      <ChapterPhotoGallery
-        photos={nimoPhotos.slice(0, 8)}
-        chapter="Chapter One"
-        chapterKey="ch1"
-        sectionTitle={['BUILT WITH', 'BARE HANDS']}
-        sectionSub="Lab Sessions · Soldering · Assembly · Prototype Days"
-        chapterColor="#FF6B35"
-        chapterRgb="255,107,53"
-      />
+      {/* ══ OWNER CONTROLS ═══════════════════════════════════════════ */}
+      <section className="px-12 py-12 bg-gradient-to-r from-white/[.05] to-white/[.02] border-b border-white/[.055]">
+        <div className="max-w-[1100px] mx-auto">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+            <div>
+              <h2 className="text-3xl font-bold text-white mb-2" style={syne}>📚 Manage Your Chapters</h2>
+              <p className="text-base text-white/60" style={dmSans}>Create new chapters or edit existing ones to organize your robotics content</p>
+            </div>
+            <div className="flex-shrink-0">
+              <AddChapterButton />
+            </div>
+          </div>
+        </div>
+      </section>
 
-      {/* ══ CHAPTER 2 ════════════════════════════════════════════ */}
-      <ChapterDivider color="#00F5FF" label="Chapter Two · Connect · Sensors · Wireless · Power" />
-      <ScrollVideoSection2 />
-      <ChapterVideoGallery
-        videos={nimoVideos.slice(4, 10)}
-        chapter="Chapter Two"
-        chapterKey="ch2"
-        sectionTitle={['WIRED IN,', 'SWITCHED ON']}
-        sectionSub="Sensor Fusion · Wireless · IoT · Live Demos"
-        chapterColor="#00F5FF"
-        chapterRgb="0,245,255"
-        stats={[
-          { num: '6', label: 'Connection Tests', color: '#00F5FF' },
-          { num: '4', label: 'Protocols', color: '#FF6B35' },
-          { num: '3×', label: 'Performance Gain', color: '#A855F7' },
-        ]}
-      />
-      <ChapterPhotoGallery
-        photos={nimoPhotos.slice(8, 16)}
-        chapter="Chapter Two"
-        chapterKey="ch2"
-        sectionTitle={['EVERY SIGNAL', 'COUNTS']}
-        sectionSub="Sensor Rigs · Field Tests · Dashboard Sessions"
-        chapterColor="#00F5FF"
-        chapterRgb="0,245,255"
-      />
+      {/* ══ CHAPTER SECTIONS - Dynamically rendered ════════════════ */}
+      {chapters.length === 0 && !loading && <p className="text-center text-white/50 py-8">No chapters available</p>}
+      
+      {chapters.find(ch => ch.chapterId === 'ch1') && (
+        <>
+          <ChapterHeader color="#FF6B35" label="Chapter One · Build · Chassis · Electronics · Firmware" chapterId="ch1" onChapterDelete={handleChapterDelete} />
+          <ScrollVideoSection1 />
+          <ChapterVideoGallery
+            videos={nimoVideos.slice(0, 6)}
+            chapter="Chapter One"
+            chapterKey="ch1"
+            sectionTitle={['OUR BUILDS', 'SPEAK LOUDEST']}
+            sectionSub="Chassis · Electronics · Firmware · Real Student Work"
+            chapterColor="#FF6B35"
+            chapterRgb="255,107,53"
+            stats={[
+              { num: '6', label: 'Build Videos', color: '#FF6B35' },
+              { num: '8', label: 'PCB Details', color: '#00F5FF' },
+              { num: '100%', label: 'Student-Made', color: '#A855F7' },
+            ]}
+          />
+          <ChapterPhotoGallery
+            photos={nimoPhotos.slice(0, 8)}
+            chapter="Chapter One"
+            chapterKey="ch1"
+            sectionTitle={['BUILT WITH', 'BARE HANDS']}
+            sectionSub="Lab Sessions · Soldering · Assembly · Prototype Days"
+            chapterColor="#FF6B35"
+            chapterRgb="255,107,53"
+          />
+        </>
+      )}
 
-      {/* ══ CHAPTER 3 ════════════════════════════════════════════ */}
-      <ChapterDivider color="#A855F7" label="Chapter Three · Automate · Vision · Edge AI · Capstone" />
-      <ScrollVideoSection3 />
-      <ChapterVideoGallery
-        videos={nimoVideos}
-        chapter="Chapter Three"
-        chapterKey="ch3"
-        sectionTitle={['INTELLIGENT.', 'AUTONOMOUS.']}
-        sectionSub="Computer Vision · Path Planning · Edge AI · Capstone"
-        chapterColor="#A855F7"
-        chapterRgb="168,85,247"
-        stats={[
-          { num: '10', label: 'Demo Videos', color: '#A855F7' },
-          { num: '6', label: 'AI Models', color: '#FF6B35' },
-          { num: '0', label: 'Cloud Dependency', color: '#00F5FF' },
-        ]}
-      />
-      <ChapterPhotoGallery
-        photos={nimoPhotos.slice(16, 32)}
-        chapter="Chapter Three"
-        chapterKey="ch3"
-        sectionTitle={['MACHINES THAT', 'THINK FOR THEMSELVES']}
-        sectionSub="Vision Labs · Algorithm Boards · Competition Day"
-        chapterColor="#A855F7"
-        chapterRgb="168,85,247"
-      />
+      {chapters.find(ch => ch.chapterId === 'ch2') && (
+        <>
+          <ChapterHeader color="#00F5FF" label="Chapter Two · Connect · Sensors · Wireless · Power" chapterId="ch2" onChapterDelete={handleChapterDelete} />
+          <ScrollVideoSection2 />
+          <ChapterVideoGallery
+            videos={nimoVideos.slice(4, 10)}
+            chapter="Chapter Two"
+            chapterKey="ch2"
+            sectionTitle={['WIRED IN,', 'SWITCHED ON']}
+            sectionSub="Sensor Fusion · Wireless · IoT · Live Demos"
+            chapterColor="#00F5FF"
+            chapterRgb="0,245,255"
+            stats={[
+              { num: '6', label: 'Connection Tests', color: '#00F5FF' },
+              { num: '4', label: 'Protocols', color: '#FF6B35' },
+              { num: '3×', label: 'Performance Gain', color: '#A855F7' },
+            ]}
+          />
+          <ChapterPhotoGallery
+            photos={nimoPhotos.slice(8, 16)}
+            chapter="Chapter Two"
+            chapterKey="ch2"
+            sectionTitle={['EVERY SIGNAL', 'COUNTS']}
+            sectionSub="Sensor Rigs · Field Tests · Dashboard Sessions"
+            chapterColor="#00F5FF"
+            chapterRgb="0,245,255"
+          />
+        </>
+      )}
+
+      {chapters.find(ch => ch.chapterId === 'ch3') && (
+        <>
+          <ChapterHeader color="#A855F7" label="Chapter Three · Automate · Vision · Edge AI · Capstone" chapterId="ch3" onChapterDelete={handleChapterDelete} />
+          <ScrollVideoSection3 />
+          <ChapterVideoGallery
+            videos={nimoVideos}
+            chapter="Chapter Three"
+            chapterKey="ch3"
+            sectionTitle={['INTELLIGENT.', 'AUTONOMOUS.']}
+            sectionSub="Computer Vision · Path Planning · Edge AI · Capstone"
+            chapterColor="#A855F7"
+            chapterRgb="168,85,247"
+            stats={[
+              { num: '10', label: 'Demo Videos', color: '#A855F7' },
+              { num: '6', label: 'AI Models', color: '#FF6B35' },
+              { num: '0', label: 'Cloud Dependency', color: '#00F5FF' },
+            ]}
+          />
+          <ChapterPhotoGallery
+            photos={nimoPhotos.slice(16, 32)}
+            chapter="Chapter Three"
+            chapterKey="ch3"
+            sectionTitle={['MACHINES THAT', 'THINK FOR THEMSELVES']}
+            sectionSub="Vision Labs · Algorithm Boards · Competition Day"
+            chapterColor="#A855F7"
+            chapterRgb="168,85,247"
+          />
+        </>
+      )}
 
       {/* ══ CLOSING CTA ══════════════════════════════════════════ */}
       <section className="relative overflow-hidden px-12 py-24 border-t border-white/[.055]">
