@@ -32,6 +32,7 @@ const connectDB = require('./config/database')
 const initializeOwner = require('./utils/initializeOwner')
 const initializePhotos = require('./utils/initializePhotos')
 const initializeVideos = require('./utils/initializeVideos')
+const initializeChapters = require('./utils/initializeChapters')
 
 connectDB()
 
@@ -49,6 +50,11 @@ setTimeout(() => {
 setTimeout(() => {
   initializeVideos.initializeVideos()
 }, 2000)
+
+// ── Initialize Chapters ───────────────────────────────────────
+setTimeout(() => {
+  initializeChapters()
+}, 2500)
 
 // ── API Routes ────────────────────────────────────────────────
 app.use('/api', require('./routes/index'))
