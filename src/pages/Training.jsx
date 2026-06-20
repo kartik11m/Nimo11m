@@ -1,90 +1,27 @@
 import { useState, useEffect, useRef, useCallback, Fragment } from "react";
+import { useOwnerAuth } from '../context/OwnerAuthContext';
+import AddCourseButton from '../components/AddCourseButton';
+import EditCourseButton from '../components/EditCourseButton';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
 // ── Font helpers (only for values Tailwind can't handle) ──────────
 const bebasNeue = { fontFamily: "'Bebas Neue', sans-serif" };
 const syne      = { fontFamily: "'Syne', sans-serif" };
 const dmSans    = { fontFamily: "'DM Sans', sans-serif" };
 
-// ── DATA ─────────────────────────────────────────────────────────
-const courses = [
-  {
-    title: "Arduino Masterclass",
-    sub: "Embedded Systems",
-    level: "beginner",
-    cat: "hardware",
-    desc: "From zero to hero with Arduino. Learn microcontroller basics, sensor interfacing, actuators, and build 10+ real-world projects.",
-    duration: "8 Weeks",
-    sessions: "24 Sessions",
-    students: "2,400+",
-    modules: ["Microcontroller Basics", "Digital & Analog I/O", "Sensors & Actuators", "Serial Communication (I2C, SPI)", "OLED Displays & Motors", "Final Capstone Project"],
-    price: "₹2,999",
-  },
-  {
-    title: "ESP32 & IoT Dev",
-    sub: "Internet of Things",
-    level: "intermediate",
-    cat: "hardware",
-    desc: "Master the ESP32 ecosystem — WiFi/BLE programming, cloud connectivity, MQTT, and build smart home & industrial monitoring systems.",
-    duration: "10 Weeks",
-    sessions: "30 Sessions",
-    students: "1,800+",
-    modules: ["ESP32 Architecture", "WiFi & BLE Programming", "MQTT & Cloud (AWS/GCP)", "Web Dashboards", "Deep Sleep & Power Mgmt", "Smart Home Project"],
-    price: "₹3,999",
-  },
-  {
-    title: "Raspberry Pi & Linux",
-    sub: "Single-Board Computing",
-    level: "intermediate",
-    cat: "hardware",
-    desc: "Explore Linux, Python programming, computer vision with OpenCV, and build a complete AI-enabled smart camera system from scratch.",
-    duration: "8 Weeks",
-    sessions: "24 Sessions",
-    students: "1,200+",
-    modules: ["Linux CLI Basics", "Python on RPi", "GPIO & Hardware Control", "OpenCV Vision", "Flask API Server", "Smart Camera Build"],
-    price: "₹3,499",
-  },
-  {
-    title: "Python for AI & ML",
-    sub: "Artificial Intelligence",
-    level: "beginner",
-    cat: "software",
-    desc: "Start your AI journey with Python. Covers NumPy, Pandas, Scikit-learn, and builds up to training real machine learning models.",
-    duration: "12 Weeks",
-    sessions: "36 Sessions",
-    students: "3,100+",
-    modules: ["Python Fundamentals", "NumPy & Pandas", "Data Visualization", "Scikit-learn Basics", "Neural Networks Intro", "ML Project Deployment"],
-    price: "₹4,499",
-  },
-  {
-    title: "Robotics with ROS",
-    sub: "Robot Operating System",
-    level: "advanced",
-    cat: "robotics",
-    desc: "Industry-standard ROS2 for building autonomous robots. Covers SLAM, navigation, robot perception, and simulation in Gazebo.",
-    duration: "14 Weeks",
-    sessions: "42 Sessions",
-    students: "680+",
-    modules: ["ROS2 Architecture", "Nodes, Topics & Services", "URDF Robot Modeling", "SLAM & Mapping", "Autonomous Navigation", "Gazebo Simulation"],
-    price: "₹6,999",
-  },
-  {
-    title: "PCB Design & Electronics",
-    sub: "Hardware Engineering",
-    level: "intermediate",
-    cat: "hardware",
-    desc: "Design and manufacture professional PCBs using KiCad. From schematic capture to Gerber files and SMD soldering techniques.",
-    duration: "6 Weeks",
-    sessions: "18 Sessions",
-    students: "950+",
-    modules: ["Schematic Design", "PCB Layout Rules", "KiCad Workflow", "DFM & Fabrication", "SMD Soldering", "Functional PCB Project"],
-    price: "₹2,499",
-  },
-];
+// ── CONSTANTS ────────────────────────────────────────────────────
 
 const lvlMap = {
   beginner:     { color: "#00F5FF", rgb: "0,245,255",   bg: "rgba(0,245,255,.1)",   border: "rgba(0,245,255,.25)",   label: "Beginner"     },
   intermediate: { color: "#FF6B35", rgb: "255,107,53",  bg: "rgba(255,107,53,.1)",  border: "rgba(255,107,53,.25)",  label: "Intermediate" },
   advanced:     { color: "#A855F7", rgb: "168,85,247",  bg: "rgba(168,85,247,.1)",  border: "rgba(168,85,247,.25)",  label: "Advanced"     },
+};
+
+const catMap = {
+  hardware: "hardware",
+  software: "software",
+  robotics: "robotics",
 };
 
 const filterTabs = [
@@ -167,8 +104,9 @@ function Modal({ children, onClose }) {
 }
 
 // ── COURSE CARD ───────────────────────────────────────────────────
-function CourseCard({ course, onEnroll }) {
-  const lv        = lvlMap[course.level];
+function CourseCard({ course, onEnroll, onCourseUpdated, onCourseDeleted }) {
+  const { isOwner } = useOwnerAuth()
+  const lv        = lvlMap[course.level]
   const shellRef  = useRef(null);
   const cardRef   = useRef(null);
   const rafRef    = useRef(null);
@@ -239,6 +177,7 @@ function CourseCard({ course, onEnroll }) {
   return (
     <div
       ref={shellRef}
+      className="group"
       style={{ perspective: "900px", cursor: "pointer" }}
       onMouseMove={handleMouseMove}
       onMouseEnter={handleMouseEnter}
@@ -266,6 +205,14 @@ function CourseCard({ course, onEnroll }) {
             transition:  "background .3s ease",
           }}
         >
+          {/* Edit button */}
+          {isOwner && (
+            <EditCourseButton 
+              course={course}
+              onCourseUpdated={onCourseUpdated}
+              onCourseDeleted={onCourseDeleted}
+            />
+          )}
           {/* Top accent bar */}
           <div className="absolute top-0 left-0 right-0 h-[2px]" style={{
             background:      lv.color,
@@ -331,7 +278,7 @@ function CourseCard({ course, onEnroll }) {
                 transition: "color .3s ease",
               }}
             >
-              {course.desc}
+              {course.description}
             </p>
 
             {/* Meta row */}
@@ -395,23 +342,49 @@ function CourseCard({ course, onEnroll }) {
 
 // ── MAIN PAGE ─────────────────────────────────────────────────────
 export default function TrainingPage() {
-  const [filter,       setFilter]       = useState("all");
-  const [enrollModal,  setEnrollModal]  = useState({ open: false, courseName: "" });
-  const [successModal, setSuccessModal] = useState(false);
-  const [ctaModal,     setCtaModal]     = useState(false);
+  const { isOwner } = useOwnerAuth()
+  const [courses, setCourses] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [filter, setFilter] = useState("all")
+  const [enrollModal, setEnrollModal] = useState({ open: false, courseName: "" })
+  const [successModal, setSuccessModal] = useState(false)
+  const [ctaModal, setCtaModal] = useState(false)
+
+  // Fetch courses on mount
+  useEffect(() => {
+    const fetchCourses = async () => {
+      try {
+        const res = await fetch(`${API_URL}/courses`)
+        const data = await res.json()
+        if (data.success) {
+          setCourses(data.courses.sort((a, b) => a.order - b.order))
+        }
+      } catch (error) {
+        console.error('Error fetching courses:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchCourses()
+  }, [])
+
+  // Handle course deletion from UI
+  const handleCourseDeleted = useCallback((courseId) => {
+    setCourses(courses.filter(c => c.courseId !== courseId))
+  }, [courses])
 
   useEffect(() => {
-    const link  = document.createElement("link");
-    link.rel    = "stylesheet";
-    link.href   = "https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;600;700;800&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap";
-    document.head.appendChild(link);
-    return () => document.head.removeChild(link);
-  }, []);
+    const link = document.createElement("link")
+    link.rel = "stylesheet"
+    link.href = "https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;600;700;800&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap"
+    document.head.appendChild(link)
+    return () => document.head.removeChild(link)
+  }, [])
 
-  const filtered   = filter === "all" ? courses : courses.filter((c) => c.cat === filter);
-  const openEnroll = (name) => setEnrollModal({ open: true, courseName: name });
-  const closeEnroll = ()    => setEnrollModal({ open: false, courseName: "" });
-  const submitEnroll = ()   => { closeEnroll(); setTimeout(() => setSuccessModal(true), 200); };
+  const filtered = filter === "all" ? courses : courses.filter((c) => c.category === filter)
+  const openEnroll = (name) => setEnrollModal({ open: true, courseName: name })
+  const closeEnroll = () => setEnrollModal({ open: false, courseName: "" })
+  const submitEnroll = () => {closeEnroll(); setTimeout(() => setSuccessModal(true), 200)}
 
   return (
     <div className="min-h-screen bg-[#050508] text-[#F0EAD6]" style={dmSans}>
@@ -530,11 +503,45 @@ export default function TrainingPage() {
         </div>
       </div>
 
+      {/* ══ MANAGE YOUR COURSES (Owner Only) ═════════════════════ */}
+      {isOwner && (
+        <div className="max-w-[1100px] mx-auto px-12 py-8 mb-6 relative overflow-hidden border border-[#A855F7]/[.22]" style={{ background: "rgba(168,85,247,.04)" }}>
+          <div className="absolute top-0 left-0 right-0 h-[1.5px]" style={{ background: "linear-gradient(90deg, rgba(168,85,247,.5) 0%, transparent 100%)" }} />
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div>
+              <h3 className="text-lg font-bold text-[#A855F7] mb-1" style={bebasNeue}>Manage Your Courses</h3>
+              <p className="text-[13px] text-[#F0EAD6]/60">Create new courses, edit existing ones, or remove courses from your catalog</p>
+            </div>
+            <AddCourseButton 
+              onCourseAdded={() => {
+                // Refresh courses from API
+                fetch(`${API_URL}/courses`)
+                  .then(res => res.json())
+                  .then(data => {
+                    if (data.success) {
+                      setCourses(data.courses.sort((a, b) => a.order - b.order))
+                    }
+                  })
+                  .catch(err => console.error('Error refreshing courses:', err))
+              }}
+            />
+          </div>
+        </div>
+      )}
+
       {/* ══ COURSES GRID ═════════════════════════════════════════ */}
       <div className="max-w-[1100px] mx-auto px-12 pb-20">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {filtered.map((c) => (
-            <CourseCard key={c.title} course={c} onEnroll={openEnroll} />
+            <CourseCard 
+              key={c.courseId} 
+              course={c} 
+              onEnroll={openEnroll}
+              onCourseUpdated={(updatedCourse) => {
+                setCourses(courses.map(co => co.courseId === updatedCourse.courseId ? updatedCourse : co))
+              }}
+              onCourseDeleted={handleCourseDeleted}
+            />
           ))}
         </div>
       </div>
