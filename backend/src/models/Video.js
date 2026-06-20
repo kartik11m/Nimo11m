@@ -21,7 +21,6 @@ const videoSchema = new mongoose.Schema({
   },
   chapter: {
     type: String,
-    enum: ['ch1', 'ch2', 'ch3'],
     required: true,
   },
   duration: {
