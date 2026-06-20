@@ -1,4 +1,9 @@
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useMemo } from 'react'
+import { useOwnerAuth } from '../context/OwnerAuthContext'
+import AddEventButton from '../components/AddEventButton'
+import EditEventButton from '../components/EditEventButton'
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
 // ── Countdown hook ───────────────────────────────────────────────
 function useCountdown(target) {
@@ -16,9 +21,10 @@ function useCountdown(target) {
   const [t, setT] = useState(calc)
   useEffect(() => {
     if (!target) return
+    setT(calc())
     const id = setInterval(() => setT(calc()), 1000)
     return () => clearInterval(id)
-  }, []) // eslint-disable-line
+  }, [target])
   return t
 }
 
@@ -234,13 +240,14 @@ function CountdownUnit({ value, label }) {
 }
 
 // ── Featured event spotlight ──────────────────────────────────────
-function FeaturedEvent({ event }) {
-  const { days, hours, mins, secs } = useCountdown(event.target)
+function FeaturedEvent({ event, onEventUpdated, onEventDeleted, isOwner }) {
+  const targetDate = useMemo(() => event.target ? new Date(event.target) : null, [event.target])
+  const { days, hours, mins, secs } = useCountdown(targetDate)
   const ts = TYPE_STYLES[event.type] ?? TYPE_STYLES['Workshop']
   const pct = Math.round((event.filled / event.seats) * 100)
 
   return (
-    <div className="relative overflow-hidden border border-white/[.08] bg-white/[.02] mb-5">
+    <div className="group relative overflow-hidden border border-white/[.08] bg-white/[.02] mb-5">
       {/* Top accent */}
       <div className="absolute top-0 left-0 right-0 h-[1.5px]"
         style={{ background: `linear-gradient(90deg,${ts.accent},#E0357A,#8B31E8,transparent)` }} />
@@ -250,7 +257,14 @@ function FeaturedEvent({ event }) {
       <div className="absolute bottom-0 right-0 w-6 h-6 border-b-2 border-r-2" style={{ borderColor: `${ts.accent}80` }} />
 
       {/* FEATURED label */}
-      <div className="absolute top-4 right-6 z-10">
+      <div className="absolute top-4 right-6 z-10 flex items-start gap-2">
+        {isOwner && (
+          <EditEventButton 
+            event={event}
+            onEventUpdated={onEventUpdated}
+            onEventDeleted={onEventDeleted}
+          />
+        )}
         <div
           className="flex items-center gap-2 px-3 py-1.5 border"
           style={{ background: `${ts.accent}12`, borderColor: `${ts.accent}30` }}
@@ -415,7 +429,7 @@ function FeaturedEvent({ event }) {
 }
 
 // ── Regular event card ────────────────────────────────────────────
-function EventCard({ event, index }) {
+function EventCard({ event, index, onEventUpdated, onEventDeleted, isOwner }) {
   const ts  = TYPE_STYLES[event.type] ?? TYPE_STYLES['Workshop']
   const pct = event.seats < 900 ? Math.round((event.filled / event.seats) * 100) : 5
 
@@ -437,6 +451,15 @@ function EventCard({ event, index }) {
       {/* Top accent on hover */}
       <div className="absolute top-0 left-0 right-0 h-[1.5px] opacity-0 group-hover:opacity-100 transition-opacity duration-300"
         style={{ background: `linear-gradient(90deg,${ts.accent},#E0357A,transparent)` }} />
+
+      {/* Edit/Delete buttons */}
+      {isOwner && (
+        <EditEventButton 
+          event={event}
+          onEventUpdated={onEventUpdated}
+          onEventDeleted={onEventDeleted}
+        />
+      )}
 
       {/* Date column */}
       <div
@@ -519,7 +542,7 @@ function EventCard({ event, index }) {
 }
 
 // ── Past event card ───────────────────────────────────────────────
-function PastCard({ event }) {
+function PastCard({ event, onEventUpdated, onEventDeleted, isOwner }) {
   const ts = TYPE_STYLES[event.type] ?? TYPE_STYLES['Workshop']
   return (
     <div className="relative shrink-0 w-[220px] p-5 border border-white/[.06] bg-white/[.02] hover:-translate-y-0.5 transition-all duration-300 group"
@@ -529,6 +552,15 @@ function PastCard({ event }) {
         className="absolute top-0 left-0 w-4 h-4 border-t border-l opacity-30 group-hover:opacity-70 transition-opacity duration-300"
         style={{ borderColor: ts.accent }}
       />
+
+      {/* Edit/Delete buttons */}
+      {isOwner && (
+        <EditEventButton 
+          event={event}
+          onEventUpdated={onEventUpdated}
+          onEventDeleted={onEventDeleted}
+        />
+      )}
 
       <span className={`font-condensed font-normal text-[7px] tracking-[.32em] uppercase border px-2 py-0.5 mb-3 inline-block ${ts.text} ${ts.border} ${ts.bg}`}>
         {event.type}
@@ -553,9 +585,56 @@ function PastCard({ event }) {
 
 // ── Main page ─────────────────────────────────────────────────────
 export default function EventsPage() {
+  const { isOwner } = useOwnerAuth()
+  const [upcomingEvents, setUpcomingEvents] = useState([])
+  const [pastEvents, setPastEvents] = useState([])
+  const [loading, setLoading] = useState(true)
   const [activeFilter, setActiveFilter] = useState('All')
-  const [filterKey,    setFilterKey]    = useState(0)
+  const [filterKey, setFilterKey] = useState(0)
   const pastRef = useRef(null)
+
+  // Fetch events from API
+  useEffect(() => {
+    const fetchEvents = async () => {
+      try {
+        const [upcomingRes, pastRes] = await Promise.all([
+          fetch(`${API_URL}/events/upcoming`),
+          fetch(`${API_URL}/events/past`)
+        ])
+        
+        const upcomingData = await upcomingRes.json()
+        const pastData = await pastRes.json()
+        
+        if (upcomingData.success) {
+          setUpcomingEvents(upcomingData.events.sort((a, b) => a.order - b.order))
+        }
+        if (pastData.success) {
+          setPastEvents(pastData.events.sort((a, b) => b.order - a.order))
+        }
+      } catch (error) {
+        console.error('Error fetching events:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    
+    fetchEvents()
+  }, [])
+
+  // Handle event update
+  const handleEventUpdated = (updatedEvent) => {
+    if (updatedEvent.isPast) {
+      setPastEvents(pastEvents.map(e => e.eventId === updatedEvent.eventId ? updatedEvent : e))
+    } else {
+      setUpcomingEvents(upcomingEvents.map(e => e.eventId === updatedEvent.eventId ? updatedEvent : e))
+    }
+  }
+
+  // Handle event deletion
+  const handleEventDeleted = (eventId) => {
+    setUpcomingEvents(upcomingEvents.filter(e => e.eventId !== eventId))
+    setPastEvents(pastEvents.filter(e => e.eventId !== eventId))
+  }
 
   useEffect(() => {
     const style = document.createElement('style')
@@ -576,8 +655,8 @@ export default function EventsPage() {
     setFilterKey((k) => k + 1)
   }
 
-  const featured   = EVENTS.find((e) => e.featured)
-  const others     = EVENTS.filter((e) => !e.featured && (activeFilter === 'All' || e.type === activeFilter))
+  const featured = upcomingEvents.find((e) => e.featured)
+  const others = upcomingEvents.filter((e) => !e.featured && (activeFilter === 'All' || e.type === activeFilter))
 
   return (
     <div className="relative min-h-screen bg-brand-bg overflow-x-hidden">
@@ -671,7 +750,33 @@ export default function EventsPage() {
                   Featured Event
                 </span>
               </div>
-              <FeaturedEvent event={featured} />
+              <FeaturedEvent 
+                event={featured} 
+                onEventUpdated={handleEventUpdated}
+                onEventDeleted={handleEventDeleted}
+                isOwner={isOwner}
+              />
+            </div>
+          )}
+
+          {/* ── Manage Your Events (Owner Only) ── */}
+          {isOwner && (
+            <div className="my-8 p-6 border border-white/[.06] bg-white/[.02] flex items-center justify-between">
+              <div>
+                <h3 className="font-display text-white/90 mb-1" style={{ fontSize: '1.3rem', letterSpacing: '.02em' }}>
+                  Manage Your Events
+                </h3>
+                <p className="font-body text-[12px] text-white/40">
+                  Add, edit, or delete events to keep your calendar up to date
+                </p>
+              </div>
+              <AddEventButton onEventCreated={(newEvent) => {
+                if (!newEvent.isPast) {
+                  setUpcomingEvents([...upcomingEvents, newEvent].sort((a, b) => a.order - b.order))
+                } else {
+                  setPastEvents([...pastEvents, newEvent].sort((a, b) => b.order - a.order))
+                }
+              }} />
             </div>
           )}
 
@@ -701,7 +806,16 @@ export default function EventsPage() {
           {/* ── Events list ── */}
           <div key={filterKey} className="flex flex-col gap-3 mb-16">
             {others.length > 0
-              ? others.map((e, i) => <EventCard key={e.id} event={e} index={i} />)
+              ? others.map((e, i) => (
+                  <EventCard 
+                    key={e.eventId} 
+                    event={e} 
+                    index={i}
+                    onEventUpdated={handleEventUpdated}
+                    onEventDeleted={handleEventDeleted}
+                    isOwner={isOwner}
+                  />
+                ))
               : (
                 <div className="flex items-center justify-center py-16 border border-white/[.06] bg-white/[.02]">
                   <p className="font-condensed font-normal text-[10px] tracking-[.42em] uppercase text-white/22">
@@ -733,7 +847,15 @@ export default function EventsPage() {
               </div>
             </div>
             <div ref={pastRef} className="flex gap-4 overflow-x-auto pb-2 events-scrollbar scroll-smooth">
-              {PAST.map((p) => <PastCard key={p.title} event={p} />)}
+              {pastEvents.map((p) => (
+                <PastCard 
+                  key={p.eventId} 
+                  event={p}
+                  onEventUpdated={handleEventUpdated}
+                  onEventDeleted={handleEventDeleted}
+                  isOwner={isOwner}
+                />
+              ))}
             </div>
           </div>
 
