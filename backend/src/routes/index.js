@@ -11,6 +11,9 @@ router.use('/', require('./photos'))
 // Video management routes
 router.use('/', require('./videos'))
 
+// Chapter management routes
+router.use('/', require('./chapters'))
+
 // Contact form routes
 router.use('/contact', require('./contact'))
 
