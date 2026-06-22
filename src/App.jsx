@@ -23,7 +23,7 @@ import OwnerLoginPage from './pages/OwnerLoginPage'
 import { OwnerAuthProvider } from './context/OwnerAuthContext'
 
 export default function App() {
-  const [loaded, setLoaded] = useState(false)
+  const [loaded, setLoaded] = useState(true)  // Temporarily bypass loading screen for debugging
 
   if (!loaded) {
     return <LoadingScreen onComplete={() => setLoaded(true)} />
