@@ -20,6 +20,9 @@ router.use('/', require('./courses'))
 // Event management routes
 router.use('/', require('./events'))
 
+// Card management routes (achievements, robots, stars, etc.)
+router.use('/cards', require('./cards'))
+
 // Contact form routes
 router.use('/contact', require('./contact'))
 
