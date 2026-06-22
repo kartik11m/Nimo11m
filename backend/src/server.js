@@ -35,6 +35,7 @@ const initializeVideos = require('./utils/initializeVideos')
 const initializeChapters = require('./utils/initializeChapters')
 const initializeCourses = require('./utils/initializeCourses')
 const initializeEvents = require('./utils/initializeEvents')
+const initializeCards = require('./utils/initializeCards')
 
 connectDB()
 
@@ -67,7 +68,10 @@ setTimeout(() => {
 setTimeout(() => {
   initializeEvents()
 }, 3500)
-
+// ── Initialize Cards ──────────────────────────────────────
+setTimeout(() => {
+  initializeCards()
+}, 4000)
 // ── API Routes ────────────────────────────────────────────────
 app.use('/api', require('./routes/index'))
 
