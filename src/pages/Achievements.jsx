@@ -7,6 +7,9 @@
 import { useEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import EditableText from "../components/EditableText";
+import CardActions from "../components/CardActions";
+import { useOwnerAuth } from "../context/OwnerAuthContext";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -222,7 +225,7 @@ function Hero() {
       <div className="gbg" /><div className="scanl" />
       <div className="relative z-[2] max-w-[1100px] mx-auto flex items-end justify-between gap-12 flex-wrap">
         <div style={{ maxWidth:610 }}>
-          <Badge>Hall of Makers · Class of 2025</Badge>
+          <Badge><EditableText contentId="achievements.hero.badge">Hall of Makers · Class of 2025</EditableText></Badge>
           <h1 className="font-bebas text-[clamp(60px,10vw,112px)] leading-[.86] tracking-[-0.02em] mb-4"
               style={{ background:"linear-gradient(160deg,#F0EAD6 0%,rgba(240,234,214,.28) 100%)",
                        WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", backgroundClip:"text" }}>
@@ -232,7 +235,7 @@ function Hero() {
           <Rule />
           <p className="text-[clamp(13px,1.3vw,15px)] font-light leading-[1.8] tracking-[.02em] mt-4"
              style={{ color:"rgba(240,234,214,.48)", maxWidth:460 }}>
-            Real students. Real robots. Real results. Every achievement here was earned with curiosity, code, and a lot of late-night debugging sessions in Bhopal.
+            <EditableText contentId="achievements.hero.description">Real students. Real robots. Real results. Every achievement here was earned with curiosity, code, and a lot of late-night debugging sessions in Bhopal.</EditableText>
           </p>
         </div>
         <div className="grid grid-cols-2 gap-3 flex-shrink-0">
@@ -254,26 +257,31 @@ function Hero() {
 }
 
 /* ─── FILM STRIP GALLERY ─────────────────────────────────────────────────────── */
-function PhotoCard({ p }) {
+function PhotoCard({ p, showEditDelete }) {
   const [hovered, setHovered] = useState(false);
-  const hasImage = !!p.src;
+  const hasImage = !!p.data?.src;
   return (
-    <div className={`relative flex-shrink-0 w-[300px] h-[210px] cursor-pointer overflow-hidden transition-all duration-[400ms] pbg ${!hasImage ? p.cls : ''}`}
+    <div className={`relative flex-shrink-0 w-[300px] h-[210px] cursor-pointer overflow-hidden transition-all duration-[400ms] pbg group ${!hasImage ? p.data?.cls : ''}`}
          style={{ border:"1.5px solid rgba(255,255,255,.07)", transform: hovered ? "scale(1.07) translateY(-5px)" : "scale(1)", zIndex: hovered ? 10 : 1,
                   boxShadow: hovered ? "0 24px 60px rgba(0,0,0,.65)" : "none", borderColor: hovered ? "rgba(255,255,255,.24)" : "rgba(255,255,255,.07)" }}
          onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>
+      {showEditDelete && (
+        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-20">
+          <CardActions cardType="photo" cardId={p._id} cardData={p.data} showEditDelete={true} />
+        </div>
+      )}
       {hasImage && (
-        <img src={p.src} alt={p.label} className="absolute inset-0 w-full h-full object-cover" />
+        <img src={p.data?.src} alt={p.data?.label} className="absolute inset-0 w-full h-full object-cover" />
       )}
       <span className="absolute top-3 left-3 font-syne text-[7px] font-bold tracking-[.3em] uppercase px-2 py-0.5 z-10"
-            style={{ background:"rgba(0,0,0,.55)", border:"1px solid rgba(255,255,255,.12)", color:"rgba(240,234,214,.7)" }}>{p.tag}</span>
-      {p.icon && (
-        <span className="absolute top-3 right-3.5 text-[1.4rem] opacity-75 z-10">{p.icon}</span>
+            style={{ background:"rgba(0,0,0,.55)", border:"1px solid rgba(255,255,255,.12)", color:"rgba(240,234,214,.7)" }}>{p.data?.tag}</span>
+      {p.data?.icon && (
+        <span className="absolute top-3 right-3.5 text-[1.4rem] opacity-75 z-10">{p.data?.icon}</span>
       )}
       <div className="absolute inset-0 flex flex-col justify-end p-[14px] transition-opacity duration-300"
            style={{ background:"linear-gradient(to top,rgba(5,5,8,.9) 0%,rgba(5,5,8,.3) 60%,transparent 100%)", opacity: hovered ? 1 : 0 }}>
-        <div className="font-syne text-[10px] font-bold tracking-[.28em] uppercase text-[#F0EAD6] mb-0.5">{p.label}</div>
-        <div className="text-[11px] font-light" style={{ color:"rgba(240,234,214,.5)" }}>{p.date}</div>
+        <div className="font-syne text-[10px] font-bold tracking-[.28em] uppercase text-[#F0EAD6] mb-0.5">{p.data?.label}</div>
+        <div className="text-[11px] font-light" style={{ color:"rgba(240,234,214,.5)" }}>{p.data?.date}</div>
       </div>
     </div>
   );
@@ -290,22 +298,46 @@ function Sprockets() {
 }
 
 function Gallery() {
+  const { getCards } = useOwnerAuth();
+  const [row1Photos, setRow1Photos] = useState(PHOTOS1.map((p, idx) => ({ _id: `photo-row1-${idx}`, data: p })));
+  const [row2Photos, setRow2Photos] = useState(PHOTOS2.map((p, idx) => ({ _id: `photo-row2-${idx}`, data: p })));
+
+  useEffect(() => {
+    const loadPhotos = async () => {
+      try {
+        const data = await getCards('photo');
+        if (data && data.length > 0) {
+          // Split into two rows (first half and second half)
+          const mid = Math.ceil(data.length / 2);
+          setRow1Photos(data.slice(0, mid));
+          setRow2Photos(data.slice(mid));
+        }
+      } catch (error) {
+        console.error('Failed to load photos:', error);
+      }
+    };
+    loadPhotos();
+  }, [getCards]);
+
   return (
     <section id="gallery" className="overflow-hidden" style={{ background:"#020204" }}>
       <div className="px-12 pt-16 pb-10 max-w-[1100px] mx-auto relative z-[2]">
-        <Badge>From The Lab</Badge>
+        <Badge><EditableText contentId="achievements.gallery.badge">From The Lab</EditableText></Badge>
         <SectionTitle style={{ fontSize:"clamp(36px,6vw,68px)" }}>Moments That<br />Define Makers</SectionTitle>
         <Rule />
         <p className="text-[13px] font-light leading-[1.8]" style={{ color:"rgba(240,234,214,.45)", maxWidth:440 }}>
-          Hundreds of hours of building, soldering, debugging — and finally, making it work. Here's what that looks like.
+          <EditableText contentId="achievements.gallery.description">Hundreds of hours of building, soldering, debugging — and finally, making it work. Here's what that looks like.</EditableText>
         </p>
+        <div className="mt-4">
+          <CardActions cardType="photo" showAddButton={true} />
+        </div>
       </div>
       {/* Row 1 */}
       <div className="relative">
         <Sprockets />
         <div className="overflow-hidden film-row-outer" style={{ background:"#0a0a0e" }}>
-          <div className="flex gap-2 py-2 anim-filmR" style={{ width:"max-content" }}>
-            {[...PHOTOS1,...PHOTOS1].map((p,i) => <PhotoCard key={i} p={p} />)}
+          <div className="flex gap-2 py-2 anim-filmR" style={{ width:"max-content", padding:"4px 48px" }}>
+            {[...row1Photos,...row1Photos].map((p,i) => <PhotoCard key={`${p._id}-${i}`} p={p} showEditDelete={true} />)}
           </div>
         </div>
         <Sprockets />
@@ -320,8 +352,8 @@ function Gallery() {
       <div className="relative">
         <Sprockets />
         <div className="overflow-hidden film-row-outer" style={{ background:"#0a0a0e" }}>
-          <div className="flex gap-2 py-2 anim-filmL" style={{ width:"max-content" }}>
-            {[...PHOTOS2,...PHOTOS2].map((p,i) => <PhotoCard key={i} p={p} />)}
+          <div className="flex gap-2 py-2 anim-filmL" style={{ width:"max-content", padding:"4px 48px" }}>
+            {[...row2Photos,...row2Photos].map((p,i) => <PhotoCard key={`${p._id}-${i}`} p={p} showEditDelete={true} />)}
           </div>
         </div>
         <Sprockets />
@@ -332,15 +364,15 @@ function Gallery() {
 
 /* ─── ACHIEVEMENT CARD ───────────────────────────────────────────────────────── */
 function AchCard({ a }) {
-  const tm = TM[a.type];
-  const lc = LC[a.level];
+  const tm = TM[a.data?.type];
+  const lc = LC[a.data?.level];
   const cardRef = useRef(null);
   const rafRef = useRef(null);
   const state = useRef({ cX:0, cY:0, tX:0, tY:0, on:false });
 
   useEffect(() => {
     const card = cardRef.current;
-    if (!card) return;
+    if (!card || !tm) return;
     const lrp = (a,b,t) => a + (b-a)*t;
     const tick = () => {
       const s = state.current;
@@ -379,43 +411,50 @@ function AchCard({ a }) {
       card.removeEventListener("mouseleave", onLeave);
       cancelAnimationFrame(rafRef.current);
     };
-  }, [tm.rgb]);
+  }, [tm?.rgb]);
+
+  if (!tm) return null;
 
   return (
-    <div ref={cardRef} className="ac relative overflow-hidden cursor-pointer"
+    <div ref={cardRef} className="ac group relative overflow-hidden cursor-pointer"
          style={{ background:"rgba(255,255,255,.03)", border:"1px solid rgba(255,255,255,.07)", backdropFilter:"blur(16px)" }}>
+      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+        <CardActions cardType="achievement" cardId={a._id} cardData={a.data} showEditDelete={true} />
+      </div>
       <div className="ac-bar absolute top-0 left-0 right-0 h-0.5" style={{ background:tm.color }} />
       <div className="ac-tl absolute top-0 left-0 w-[18px] h-[18px]" style={{ borderTop:`1px solid ${tm.color}`, borderLeft:`1px solid ${tm.color}` }} />
       <div className="ac-br absolute bottom-0 right-0 w-[18px] h-[18px]" style={{ borderBottom:`1px solid ${tm.color}40`, borderRight:`1px solid ${tm.color}40` }} />
-      <div className="absolute right-[-6px] bottom-[-14px] font-bebas text-[8rem] leading-none pointer-events-none select-none opacity-[.06] text-[#F0EAD6]">{a.init}</div>
+      <div className="absolute right-[-6px] bottom-[-14px] font-bebas text-[8rem] leading-none pointer-events-none select-none opacity-[.06] text-[#F0EAD6]">{a.data?.init}</div>
       {/* Head */}
       <div className="px-[22px] pt-5 pb-[15px]" style={{ borderBottom:"1px solid rgba(255,255,255,.055)" }}>
         <div className="inline-flex items-center gap-[5px] px-[10px] py-1 mb-3 font-syne text-[8px] font-bold tracking-[.28em] uppercase"
              style={{ background:`rgba(${tm.rgb},.1)`, border:`1px solid rgba(${tm.rgb},.28)`, color:tm.color }}>
           {tm.icon} {tm.label}
         </div>
-        <div className="font-bebas text-[25px] leading-[.95] mb-0.5 text-[#F0EAD6] transition-colors duration-300">{a.name}</div>
-        <div className="font-syne text-[8px] font-semibold tracking-[.26em] uppercase" style={{ color:"rgba(240,234,214,.3)" }}>{a.robot} · {a.city}</div>
+        <div className="font-bebas text-[25px] leading-[.95] mb-0.5 text-[#F0EAD6] transition-colors duration-300"><EditableText contentId={`ach.${a._id}.name`} textColor="#F0EAD6">{a.data?.name}</EditableText></div>
+        <div className="font-syne text-[8px] font-semibold tracking-[.26em] uppercase" style={{ color:"rgba(240,234,214,.3)" }}><EditableText contentId={`ach.${a._id}.robot`} textColor="rgba(240,234,214,.3)">{a.data?.robot}</EditableText> · <EditableText contentId={`ach.${a._id}.city`} textColor="rgba(240,234,214,.3)">{a.data?.city}</EditableText></div>
       </div>
       {/* Body */}
       <div className="px-[22px] py-[15px]">
-        <p className="text-[12.5px] font-light leading-[1.75] italic mb-3 transition-colors duration-300" style={{ color:"rgba(240,234,214,.52)" }}>"{a.quote}"</p>
+        <p className="text-[12.5px] font-light leading-[1.75] italic mb-3 transition-colors duration-300" style={{ color:"rgba(240,234,214,.52)" }}>"<EditableText contentId={`ach.${a._id}.quote`} textColor="rgba(240,234,214,.52)">{a.data?.quote}</EditableText>"</p>
         <div className="flex flex-wrap gap-1.5 mb-3">
-          {a.tags.map(t => (
+          {(a.data?.tags || []).map((t, idx) => (
             <span key={t} className="px-2 py-0.5 font-syne text-[7.5px] font-bold tracking-[.2em] uppercase"
-                  style={{ background:`rgba(${tm.rgb},.07)`, border:`1px solid rgba(${tm.rgb},.22)`, color:tm.color }}>{t}</span>
+                  style={{ background:`rgba(${tm.rgb},.07)`, border:`1px solid rgba(${tm.rgb},.22)`, color:tm.color }}><EditableText contentId={`ach.${a._id}.tag${idx}`} textColor={tm.color}>{t}</EditableText></span>
           ))}
         </div>
       </div>
       {/* Foot */}
       <div className="px-[22px] py-[11px] flex items-end justify-between" style={{ borderTop:"1px solid rgba(255,255,255,.055)" }}>
         <div className="font-syne text-[11px] font-bold leading-[1.3]" style={{ color:"rgba(240,234,214,.8)" }}>
-          {a.title}<br />
-          <span className="font-light text-[10px]" style={{ color:"rgba(240,234,214,.35)" }}>{a.sub}</span>
+          <EditableText contentId={`ach.${a._id}.title`} textColor="rgba(240,234,214,.8)">{a.data?.title}</EditableText><br />
+          <span className="font-light text-[10px]" style={{ color:"rgba(240,234,214,.35)" }}><EditableText contentId={`ach.${a._id}.sub`} textColor="rgba(240,234,214,.35)">{a.data?.sub}</EditableText></span>
         </div>
-        <div className="text-right flex-shrink-0 ml-2.5">
-          <div className="font-syne text-[8px] font-semibold tracking-[.28em] uppercase" style={{ color:"rgba(240,234,214,.3)" }}>{a.date}</div>
-          <div className="font-syne text-[8px] font-bold tracking-[.22em] uppercase mt-0.5" style={{ color:lc }}>{a.level}</div>
+        <div className="flex flex-col items-end gap-1 flex-shrink-0 ml-2.5">
+          <div className="text-right">
+            <div className="font-syne text-[8px] font-semibold tracking-[.28em] uppercase" style={{ color:"rgba(240,234,214,.3)" }}><EditableText contentId={`ach.${a._id}.date`} textColor="rgba(240,234,214,.3)">{a.data?.date}</EditableText></div>
+            <div className="font-syne text-[8px] font-bold tracking-[.22em] uppercase mt-0.5" style={{ color:lc }}><EditableText contentId={`ach.${a._id}.level`} textColor={lc}>{a.data?.level}</EditableText></div>
+          </div>
         </div>
       </div>
     </div>
@@ -424,8 +463,24 @@ function AchCard({ a }) {
 
 /* ─── ACHIEVEMENTS SECTION ───────────────────────────────────────────────────── */
 function Achievements() {
+  const { getCards } = useOwnerAuth();
+  const [achievements, setAchievements] = useState(ACHS.map((a, idx) => ({ _id: `achievement-${idx}`, data: a })));
   const [filter, setFilter] = useState("all");
   const gridRef = useRef(null);
+
+  useEffect(() => {
+    const loadAchievements = async () => {
+      try {
+        const data = await getCards('achievement');
+        if (data && data.length > 0) {
+          setAchievements(data);
+        }
+      } catch (error) {
+        console.error('Failed to load achievements:', error);
+      }
+    };
+    loadAchievements();
+  }, [getCards]);
 
   useEffect(() => {
     if (!gridRef.current) return;
@@ -434,9 +489,9 @@ function Achievements() {
       gsap.fromTo(c, { opacity:0, y:28 }, { opacity:1, y:0, duration:.65, ease:"power2.out",
         scrollTrigger:{ trigger:c, start:"top 90%" }, delay:(i%3)*.1 });
     });
-  }, []);
+  }, [achievements]);
 
-  const visible = ACHS.filter(a => filter === "all" || a.type === filter);
+  const visible = achievements.filter(a => filter === "all" || a.data?.type === filter);
 
   return (
     <section id="ach-section" className="py-20 px-12 relative overflow-hidden"
@@ -445,30 +500,33 @@ function Achievements() {
            style={{ background:"radial-gradient(ellipse,rgba(255,107,53,.09) 0%,transparent 70%)" }} />
       <div className="gbg" /><div className="scanl" />
       <div className="relative z-[2] max-w-[1100px] mx-auto">
-        <Badge>All Achievements</Badge>
+        <Badge><EditableText contentId="achievements.ach-section.badge">All Achievements</EditableText></Badge>
         <div className="flex items-end justify-between flex-wrap gap-4 mb-5">
           <SectionTitle style={{ fontSize:"clamp(36px,5.5vw,68px)" }}>Every Win<br />Counts</SectionTitle>
           <p className="text-[13px] font-light leading-[1.8]" style={{ color:"rgba(240,234,214,.45)", maxWidth:340 }}>
-            Click any card to explore the full story. Filter by category below.
+            <EditableText contentId="achievements.ach-section.description">Click any card to explore the full story. Filter by category below.</EditableText>
           </p>
         </div>
         {/* Filter bar */}
-        <div className="flex items-center gap-2 flex-wrap mb-9">
-          <span className="font-syne text-[8px] font-bold tracking-[.35em] uppercase mr-1.5" style={{ color:"rgba(240,234,214,.28)" }}>Filter</span>
-          {[["all","All"],["competition","Competitions"],["certification","Certifications"],["project","Projects"],["special","Special"]].map(([val,lbl]) => (
-            <button key={val}
-                    onClick={() => setFilter(val)}
-                    className="font-syne text-[9px] font-bold tracking-[.28em] uppercase px-[18px] py-2 cursor-pointer transition-all duration-[250ms]"
-                    style={{
-                      border: filter === val ? "1px solid rgba(255,107,53,.42)" : "1px solid rgba(255,255,255,.1)",
-                      background: filter === val ? "rgba(255,107,53,.08)" : "transparent",
-                      color: filter === val ? "#FF6B35" : "rgba(240,234,214,.4)"
-                    }}>{lbl}</button>
-          ))}
+        <div className="flex items-center gap-2 flex-wrap mb-9 justify-between">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="font-syne text-[8px] font-bold tracking-[.35em] uppercase mr-1.5" style={{ color:"rgba(240,234,214,.28)" }}>Filter</span>
+            {[["all","All"],["competition","Competitions"],["certification","Certifications"],["project","Projects"],["special","Special"]].map(([val,lbl]) => (
+              <button key={val}
+                      onClick={() => setFilter(val)}
+                      className="font-syne text-[9px] font-bold tracking-[.28em] uppercase px-[18px] py-2 cursor-pointer transition-all duration-[250ms]"
+                      style={{
+                        border: filter === val ? "1px solid rgba(255,107,53,.42)" : "1px solid rgba(255,255,255,.1)",
+                        background: filter === val ? "rgba(255,107,53,.08)" : "transparent",
+                        color: filter === val ? "#FF6B35" : "rgba(240,234,214,.4)"
+                      }}>{lbl}</button>
+            ))}
+          </div>
+          <CardActions cardType="achievement" showAddButton={true} />
         </div>
         <div ref={gridRef} className="grid grid-cols-3 gap-[18px] max-[900px]:grid-cols-2 max-[560px]:grid-cols-1">
           {visible.map(a => (
-            <div key={a.id} className="ac-item"><AchCard a={a} /></div>
+            <div key={a._id} className="ac-item"><AchCard a={a} /></div>
           ))}
         </div>
       </div>
@@ -480,38 +538,41 @@ function Achievements() {
 function RobotCard({ r }) {
   const [hov, setHov] = useState(false);
   return (
-    <div className="rcard w-[310px] flex-shrink-0 relative overflow-hidden cursor-pointer"
+    <div className="rcard group w-[310px] flex-shrink-0 relative overflow-hidden cursor-pointer"
          style={{
            background:"rgba(255,255,255,.03)", border:"1px solid rgba(255,255,255,.07)",
            backdropFilter:"blur(16px)", transition:"border-color .3s,background .3s,transform .4s cubic-bezier(.16,1,.3,1)",
            transform: hov ? "translateY(-4px)" : "none",
-           borderColor: hov ? `rgba(${r.rgb},.35)` : "rgba(255,255,255,.07)"
+           borderColor: hov ? `rgba(${r.data?.rgb || '255,107,53'},.35)` : "rgba(255,255,255,.07)"
          }}
          onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}>
-      <div className="h-[175px] flex items-center justify-center relative overflow-hidden rcard-viz"
-           style={{ background:`linear-gradient(135deg,rgba(${r.rgb},.05) 0%,rgba(${r.rgb},.2) 100%)` }}>
-        <div className="absolute inset-0" style={{ background:`radial-gradient(ellipse at 50% 80%,rgba(${r.rgb},.18) 0%,transparent 65%)` }} />
-        <span className="text-[3.4rem] relative z-[2]" style={{ color:r.color, filter:`drop-shadow(0 0 18px ${r.color})` }}>{r.emoji}</span>
+      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+        <CardActions cardType="robot" cardId={r._id} cardData={r.data} showEditDelete={true} />
       </div>
-      <div className="absolute top-0 left-0 right-0 h-0.5" style={{ background:r.color }} />
+      <div className="h-[175px] flex items-center justify-center relative overflow-hidden rcard-viz"
+           style={{ background:`linear-gradient(135deg,rgba(${r.data?.rgb || '255,107,53'},.05) 0%,rgba(${r.data?.rgb || '255,107,53'},.2) 100%)` }}>
+        <div className="absolute inset-0" style={{ background:`radial-gradient(ellipse at 50% 80%,rgba(${r.data?.rgb || '255,107,53'},.18) 0%,transparent 65%)` }} />
+        <span className="text-[3.4rem] relative z-[2]" style={{ color:r.data?.color || '#FF6B35', filter:`drop-shadow(0 0 18px ${r.data?.color || '#FF6B35'})` }}>{r.data?.emoji || '🤖'}</span>
+      </div>
+      <div className="absolute top-0 left-0 right-0 h-0.5" style={{ background:r.data?.color || '#FF6B35' }} />
       <div className="px-5 py-[18px]">
-        <div className="font-syne text-[8px] font-bold tracking-[.32em] uppercase mb-1.5" style={{ color:r.color }}>{r.type}</div>
-        <div className="font-bebas text-[1.55rem] leading-[.95] mb-2 text-[#F0EAD6]">{r.name}</div>
-        <p className="text-[12px] font-light leading-[1.7] mb-3.5" style={{ color:"rgba(240,234,214,.48)" }}>{r.desc}</p>
+        <div className="font-syne text-[8px] font-bold tracking-[.32em] uppercase mb-1.5" style={{ color:r.data?.color || '#FF6B35' }}><EditableText contentId={`robot.${r._id}.type`} textColor={r.data?.color || '#FF6B35'}>{r.data?.type || 'Robot'}</EditableText></div>
+        <div className="font-bebas text-[1.55rem] leading-[.95] mb-2 text-[#F0EAD6]"><EditableText contentId={`robot.${r._id}.name`} textColor="#F0EAD6">{r.data?.name || 'Robot'}</EditableText></div>
+        <p className="text-[12px] font-light leading-[1.7] mb-3.5" style={{ color:"rgba(240,234,214,.48)" }}><EditableText contentId={`robot.${r._id}.desc`} textColor="rgba(240,234,214,.48)">{r.data?.desc || ''}</EditableText></p>
         <div className="flex flex-col gap-[5px] mb-3.5">
-          {r.specs.map(s => (
+          {(r.data?.specs || []).map((s, sidx) => (
             <div key={s} className="flex items-center gap-1.5 text-[11px] font-light" style={{ color:"rgba(240,234,214,.4)" }}>
-              <span className="w-1 h-1 rounded-full flex-shrink-0" style={{ background:r.color }} />{s}
+              <span className="w-1 h-1 rounded-full flex-shrink-0" style={{ background:r.data?.color || '#FF6B35' }} /><EditableText contentId={`robot.${r._id}.spec${sidx}`} textColor="rgba(240,234,214,.4)">{s}</EditableText>
             </div>
           ))}
         </div>
         <div className="flex items-center justify-between pt-3" style={{ borderTop:"1px solid rgba(255,255,255,.06)" }}>
           <div>
             <div className="font-syne text-[7px] font-bold tracking-[.32em] uppercase mb-0.5" style={{ color:"rgba(240,234,214,.3)" }}>Built By</div>
-            <div className="font-bebas text-[1.2rem]" style={{ color:r.color }}>{r.built}</div>
+            <div className="font-bebas text-[1.2rem]" style={{ color:r.data?.color || '#FF6B35' }}><EditableText contentId={`robot.${r._id}.built`} textColor={r.data?.color || '#FF6B35'}>{r.data?.built || 'Students'}</EditableText></div>
           </div>
           <div className="font-syne text-[8px] font-bold tracking-[.24em] uppercase px-[10px] py-0.5"
-               style={{ border:`1px solid ${r.color}44`, color:r.color }}>{r.level}</div>
+               style={{ border:`1px solid ${r.data?.color || '#FF6B35'}44`, color:r.data?.color || '#FF6B35' }}><EditableText contentId={`robot.${r._id}.level`} textColor={r.data?.color || '#FF6B35'}>{r.data?.level || 'Beginner'}</EditableText></div>
         </div>
       </div>
     </div>
@@ -521,6 +582,23 @@ function RobotCard({ r }) {
 function Robots() {
   const wrapRef = useRef(null);
   const drag = useRef({ active:false, sx:0, sl:0 });
+  const { getCards } = useOwnerAuth();
+  const [robots, setRobots] = useState(ROBOTS.map((r, idx) => ({ _id: `robot-${idx}`, data: r })));
+
+  useEffect(() => {
+    const loadRobots = async () => {
+      try {
+        const data = await getCards('robot');
+        if (data && data.length > 0) {
+          setRobots(data);
+        }
+      } catch (error) {
+        console.error('Failed to load robots:', error);
+        // Fall back to default robots
+      }
+    };
+    loadRobots();
+  }, [getCards]);
 
   useEffect(() => {
     const el = wrapRef.current;
@@ -542,16 +620,19 @@ function Robots() {
   return (
     <section id="robots" className="py-20" style={{ borderTop:"1px solid rgba(255,255,255,.055)" }}>
       <div className="px-12 max-w-[1148px] mx-auto mb-8">
-        <Badge>Robot Roll of Honour</Badge>
+        <Badge><EditableText contentId="achievements.robots.badge">Robot Roll of Honour</EditableText></Badge>
         <div className="flex items-end justify-between flex-wrap gap-4">
-          <SectionTitle style={{ fontSize:"clamp(32px,5vw,62px)" }}>Machines Our<br />Students Built</SectionTitle>
-          <p className="text-[13px] font-light leading-[1.8]" style={{ color:"rgba(240,234,214,.45)", maxWidth:320 }}>Drag or scroll right to explore every robot ever built at Nimo Labs.</p>
+          <div>
+            <SectionTitle style={{ fontSize:"clamp(32px,5vw,62px)" }}>Machines Our<br />Students Built</SectionTitle>
+            <p className="text-[13px] font-light leading-[1.8] mt-4" style={{ color:"rgba(240,234,214,.45)", maxWidth:320 }}><EditableText contentId="achievements.robots.description">Drag or scroll right to explore every robot ever built at Nimo Labs.</EditableText></p>
+          </div>
+          <CardActions cardType="robot" showAddButton={true} />
         </div>
       </div>
       <div ref={wrapRef} className="robot-rail overflow-x-auto cursor-grab active:cursor-grabbing pb-2.5"
            style={{ scrollbarWidth:"thin" }}>
         <div className="flex gap-4 px-12" style={{ width:"max-content", padding:"4px 48px" }}>
-          {ROBOTS.map((r,i) => <RobotCard key={i} r={r} />)}
+          {robots.map((r) => <RobotCard key={r._id} r={r} />)}
         </div>
       </div>
     </section>
@@ -560,6 +641,24 @@ function Robots() {
 
 /* ─── RISING STARS ───────────────────────────────────────────────────────────── */
 function Stars() {
+  const { getCards } = useOwnerAuth();
+  const [stars, setStars] = useState(STARS.map((s, idx) => ({ _id: `star-${idx}`, data: s })));
+
+  useEffect(() => {
+    const loadStars = async () => {
+      try {
+        const data = await getCards('star');
+        if (data && data.length > 0) {
+          setStars(data);
+        }
+      } catch (error) {
+        console.error('Failed to load stars:', error);
+        // Fall back to default stars
+      }
+    };
+    loadStars();
+  }, [getCards]);
+
   return (
     <section id="stars" className="py-20 px-12 relative overflow-hidden"
              style={{ borderTop:"1px solid rgba(255,255,255,.055)" }}>
@@ -567,31 +666,39 @@ function Stars() {
            style={{ background:"radial-gradient(ellipse,rgba(168,85,247,.09) 0%,transparent 70%)" }} />
       <div className="gbg" />
       <div className="relative z-[2] max-w-[1100px] mx-auto">
-        <Badge>Rising Stars</Badge>
-        <SectionTitle style={{ fontSize:"clamp(32px,5vw,62px)", marginBottom:8 }}>Class of 2025</SectionTitle>
+        <div className="flex items-center justify-between gap-4 mb-9">
+          <div>
+            <Badge><EditableText contentId="achievements.stars.badge">Rising Stars</EditableText></Badge>
+            <SectionTitle style={{ fontSize:"clamp(32px,5vw,62px)", marginBottom:8 }}>Class of 2025</SectionTitle>
+          </div>
+          <CardActions cardType="star" showAddButton={true} />
+        </div>
         <p className="text-[13px] font-light leading-[1.8] mb-9" style={{ color:"rgba(240,234,214,.45)", maxWidth:440 }}>
-          These students went above and beyond — in the lab, in competitions, and in life.
+          <EditableText contentId="achievements.stars.description">These students went above and beyond — in the lab, in competitions, and in life.</EditableText>
         </p>
         <div className="grid grid-cols-3 gap-4 max-[900px]:grid-cols-1">
-          {STARS.map((s,i) => (
-            <div key={i} className="scard relative p-[26px] overflow-hidden transition-all duration-[350ms] cursor-default"
+          {stars.map((s) => (
+            <div key={s._id} className="scard group relative p-[26px] overflow-hidden transition-all duration-[350ms] cursor-default"
                  style={{ background:"rgba(255,255,255,.03)", border:"1px solid rgba(255,255,255,.07)", backdropFilter:"blur(16px)" }}
                  onMouseEnter={e => { e.currentTarget.style.background="rgba(255,255,255,.048)"; e.currentTarget.style.transform="translateY(-4px)"; }}
                  onMouseLeave={e => { e.currentTarget.style.background="rgba(255,255,255,.03)";  e.currentTarget.style.transform="none"; }}>
-              <div className="absolute top-0 left-0 right-0 h-[1.5px]" style={{ background:`linear-gradient(90deg,${s.color},transparent)` }} />
-              <div className="absolute right-[-4px] top-[-10px] font-bebas text-[6rem] leading-none opacity-[.06] pointer-events-none select-none text-[#F0EAD6]">{s.init}</div>
-              <div className="relative w-[50px] h-[50px] rounded-full flex items-center justify-center font-syne text-[14px] font-bold mb-3.5"
-                   style={{ background:"rgba(0,0,0,.45)", border:`1px solid ${s.color}44`, color:s.color }}>
-                {s.init}
-                <span className="scard-av absolute inset-[-3px] rounded-full" style={{ border:`1px solid ${s.color}30` }} />
+              <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                <CardActions cardType="star" cardId={s._id} cardData={s.data} showEditDelete={true} />
               </div>
-              <div className="font-syne text-[15px] font-bold mb-0.5 text-[#F0EAD6]">{s.name}</div>
-              <div className="text-[11px] font-light mb-2.5" style={{ color:"rgba(240,234,214,.38)" }}>{s.city} · {s.achs} Achievements</div>
-              <div className="font-syne text-[9px] font-bold tracking-[.24em] uppercase mb-3" style={{ color:s.color }}>{s.spec}</div>
+              <div className="absolute top-0 left-0 right-0 h-[1.5px]" style={{ background:`linear-gradient(90deg,${s.data?.color || '#A855F7'},transparent)` }} />
+              <div className="absolute right-[-4px] top-[-10px] font-bebas text-[6rem] leading-none opacity-[.06] pointer-events-none select-none text-[#F0EAD6]">{s.data?.init || 'XX'}</div>
+              <div className="relative w-[50px] h-[50px] rounded-full flex items-center justify-center font-syne text-[14px] font-bold mb-3.5"
+                   style={{ background:"rgba(0,0,0,.45)", border:`1px solid ${s.data?.color || '#A855F7'}44`, color:s.data?.color || '#A855F7' }}>
+                {s.data?.init || 'XX'}
+                <span className="scard-av absolute inset-[-3px] rounded-full" style={{ border:`1px solid ${s.data?.color || '#A855F7'}30` }} />
+              </div>
+              <div className="font-syne text-[15px] font-bold mb-0.5 text-[#F0EAD6]"><EditableText contentId={`star.${s._id}.name`} textColor="#F0EAD6">{s.data?.name || 'Student'}</EditableText></div>
+              <div className="text-[11px] font-light mb-2.5" style={{ color:"rgba(240,234,214,.38)" }}><EditableText contentId={`star.${s._id}.city`} textColor="rgba(240,234,214,.38)">{s.data?.city || 'City'}</EditableText> · <EditableText contentId={`star.${s._id}.achs`} textColor="rgba(240,234,214,.38)">{s.data?.achs || 0}</EditableText> Achievements</div>
+              <div className="font-syne text-[9px] font-bold tracking-[.24em] uppercase mb-3" style={{ color:s.data?.color || '#A855F7' }}><EditableText contentId={`star.${s._id}.spec`} textColor={s.data?.color || '#A855F7'}>{s.data?.spec || 'Specialty'}</EditableText></div>
               <div className="flex flex-wrap gap-1.5">
-                {s.tags.map(t => (
+                {(s.data?.tags || []).map((t, tidx) => (
                   <span key={t} className="font-syne text-[7px] font-bold tracking-[.2em] uppercase px-2 py-0.5"
-                        style={{ border:`1px solid ${s.color}33`, color:s.color, background:"rgba(0,0,0,.35)" }}>{t}</span>
+                        style={{ border:`1px solid ${s.data?.color || '#A855F7'}33`, color:s.data?.color || '#A855F7', background:"rgba(0,0,0,.35)" }}><EditableText contentId={`star.${s._id}.tag${tidx}`} textColor={s.data?.color || '#A855F7'}>{t}</EditableText></span>
                 ))}
               </div>
             </div>
@@ -603,7 +710,7 @@ function Stars() {
 }
 
 /* ─── SKILLS ─────────────────────────────────────────────────────────────────── */
-function SkillBar({ n, p, color }) {
+function SkillBar({ n, p, color, catIdx, skillIdx }) {
   const fillRef = useRef(null);
   useEffect(() => {
     if (!fillRef.current) return;
@@ -615,7 +722,7 @@ function SkillBar({ n, p, color }) {
   }, [p]);
   return (
     <div className="flex items-center justify-between mb-[13px]">
-      <span className="text-[12px] font-light mr-2.5 whitespace-nowrap" style={{ color:"rgba(240,234,214,.65)" }}>{n}</span>
+      <span className="text-[12px] font-light mr-2.5 whitespace-nowrap" style={{ color:"rgba(240,234,214,.65)" }}><EditableText contentId={`skill.${catIdx}.${skillIdx}.name`} textColor="rgba(240,234,214,.65)">{n}</EditableText></span>
       <div className="flex-1 h-[3px] overflow-hidden" style={{ background:"rgba(255,255,255,.07)" }}>
         <div ref={fillRef} className="ski-fill h-full rounded-[2px]" style={{ background:`linear-gradient(90deg,${color},${color}77)` }} />
       </div>
@@ -625,6 +732,24 @@ function SkillBar({ n, p, color }) {
 }
 
 function Skills() {
+  const { getCards } = useOwnerAuth();
+  const [certs, setCerts] = useState(CERTS.map((c, idx) => ({ _id: `cert-${idx}`, data: c })));
+
+  useEffect(() => {
+    const loadCerts = async () => {
+      try {
+        const data = await getCards('cert');
+        if (data && data.length > 0) {
+          setCerts(data);
+        }
+      } catch (error) {
+        console.error('Failed to load certs:', error);
+        // Fall back to default certs
+      }
+    };
+    loadCerts();
+  }, [getCards]);
+
   return (
     <section id="skills" className="py-20 px-12 relative overflow-hidden"
              style={{ borderTop:"1px solid rgba(255,255,255,.055)" }}>
@@ -632,31 +757,37 @@ function Skills() {
            style={{ background:"radial-gradient(ellipse,rgba(255,107,53,.07) 0%,transparent 70%)" }} />
       <div className="gbg" />
       <div className="relative z-[2] max-w-[1100px] mx-auto">
-        <Badge>Skills & Certifications</Badge>
+        <Badge><EditableText contentId="achievements.skills.badge">Skills & Certifications</EditableText></Badge>
         <SectionTitle style={{ fontSize:"clamp(32px,5vw,62px)", marginBottom:8 }}>What They<br />Learned</SectionTitle>
         <p className="text-[13px] font-light leading-[1.8] mb-9" style={{ color:"rgba(240,234,214,.45)", maxWidth:440 }}>
-          Every skill listed here was earned through real projects — not just lectures.
+          <EditableText contentId="achievements.skills.description">Every skill listed here was earned through real projects — not just lectures.</EditableText>
         </p>
         <div className="grid grid-cols-3 gap-5 max-[900px]:grid-cols-1">
-          {SKILLCATS.map(cat => (
+          {SKILLCATS.map((cat, catIdx) => (
             <div key={cat.title} className="relative p-6 overflow-hidden" style={{ background:"rgba(255,255,255,.03)", border:"1px solid rgba(255,255,255,.07)", backdropFilter:"blur(16px)" }}>
               <div className="absolute top-0 left-0 right-0 h-[1.5px]" style={{ background:cat.color }} />
-              <div className="font-syne text-[10px] font-bold tracking-[.32em] uppercase mb-[18px]" style={{ color:cat.color }}>{cat.title}</div>
-              {cat.skills.map(sk => <SkillBar key={sk.n} n={sk.n} p={sk.p} color={cat.color} />)}
+              <div className="font-syne text-[10px] font-bold tracking-[.32em] uppercase mb-[18px]" style={{ color:cat.color }}><EditableText contentId={`skillcat.${catIdx}.title`} textColor={cat.color}>{cat.title}</EditableText></div>
+              {cat.skills.map((sk, skillIdx) => <SkillBar key={sk.n} n={sk.n} p={sk.p} color={cat.color} catIdx={catIdx} skillIdx={skillIdx} />)}
             </div>
           ))}
         </div>
         {/* Certs */}
         <div className="mt-11">
-          <div className="font-syne text-[8px] font-bold tracking-[.38em] uppercase mb-4" style={{ color:"rgba(240,234,214,.28)" }}>Issued Certifications</div>
+          <div className="flex items-center justify-between gap-4 mb-4">
+            <div className="font-syne text-[8px] font-bold tracking-[.38em] uppercase" style={{ color:"rgba(240,234,214,.28)" }}>Issued Certifications</div>
+            <CardActions cardType="cert" showAddButton={true} />
+          </div>
           <div className="flex flex-wrap gap-2.5">
-            {CERTS.map(c => (
-              <div key={c.txt} className="flex items-center gap-2 px-[14px] py-2 cursor-default transition-all duration-[250ms]"
-                   style={{ border:`1px solid ${c.color}33`, background:"rgba(0,0,0,.3)" }}
+            {certs.map((c) => (
+              <div key={c._id} className="group flex items-center gap-2 px-[14px] py-2 cursor-default transition-all duration-[250ms] relative"
+                   style={{ border:`1px solid ${c.data?.color || '#FF6B35'}33`, background:"rgba(0,0,0,.3)" }}
                    onMouseEnter={e => e.currentTarget.style.background="rgba(255,255,255,.05)"}
                    onMouseLeave={e => e.currentTarget.style.background="rgba(0,0,0,.3)"}>
-                <span className="text-[1rem]">{c.icon}</span>
-                <span className="font-syne text-[8px] font-bold tracking-[.24em] uppercase" style={{ color:c.color }}>{c.txt}</span>
+                <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                  <CardActions cardType="cert" cardId={c._id} cardData={c.data} showEditDelete={true} />
+                </div>
+                <span className="text-[1rem]">{c.data?.icon || '🏅'}</span>
+                <span className="font-syne text-[8px] font-bold tracking-[.24em] uppercase" style={{ color:c.data?.color || '#FF6B35' }}><EditableText contentId={`cert.${c._id}.text`} textColor={c.data?.color || '#FF6B35'}>{c.data?.txt || 'Certification'}</EditableText></span>
               </div>
             ))}
           </div>
@@ -668,6 +799,24 @@ function Skills() {
 
 /* ─── TESTIMONIALS ───────────────────────────────────────────────────────────── */
 function Testimonials() {
+  const { getCards } = useOwnerAuth();
+  const [testimonials, setTestimonials] = useState(TESTIS.map((t, idx) => ({ _id: `testimonial-${idx}`, data: t })));
+
+  useEffect(() => {
+    const loadTestimonials = async () => {
+      try {
+        const data = await getCards('testimonial');
+        if (data && data.length > 0) {
+          setTestimonials(data);
+        }
+      } catch (error) {
+        console.error('Failed to load testimonials:', error);
+        // Fall back to default testimonials
+      }
+    };
+    loadTestimonials();
+  }, [getCards]);
+
   return (
     <section id="testi" className="py-20 px-12 relative overflow-hidden"
              style={{ borderTop:"1px solid rgba(255,255,255,.055)" }}>
@@ -675,24 +824,32 @@ function Testimonials() {
            style={{ background:"radial-gradient(ellipse,rgba(0,245,255,.05) 0%,transparent 70%)" }} />
       <div className="gbg" />
       <div className="relative z-[2] max-w-[1100px] mx-auto">
-        <Badge>In Their Words</Badge>
-        <SectionTitle style={{ fontSize:"clamp(32px,5vw,62px)", marginBottom:36 }}>What Students<br />&amp; Parents Say</SectionTitle>
+        <div className="flex items-center justify-between gap-4 mb-9">
+          <div>
+            <Badge><EditableText contentId="achievements.testimonials.badge">In Their Words</EditableText></Badge>
+            <SectionTitle style={{ fontSize:"clamp(32px,5vw,62px)", marginBottom:8 }}>What Students<br />&amp; Parents Say</SectionTitle>
+          </div>
+          <CardActions cardType="testimonial" showAddButton={true} />
+        </div>
         <div className="grid grid-cols-2 gap-4 max-[900px]:grid-cols-1">
-          {TESTIS.map((t,i) => (
-            <div key={i} className="relative p-7 overflow-hidden transition-all duration-[350ms]"
+          {testimonials.map((t) => (
+            <div key={t._id} className="group relative p-7 overflow-hidden transition-all duration-[350ms]"
                  style={{ background:"rgba(255,255,255,.03)", border:"1px solid rgba(255,255,255,.07)", backdropFilter:"blur(16px)" }}
                  onMouseEnter={e => { e.currentTarget.style.background="rgba(255,255,255,.045)"; e.currentTarget.style.transform="translateY(-3px)"; }}
                  onMouseLeave={e => { e.currentTarget.style.background="rgba(255,255,255,.03)"; e.currentTarget.style.transform="none"; }}>
-              <div className="absolute top-0 left-0 right-0 h-[1.5px]" style={{ background:`linear-gradient(90deg,${t.color},transparent)` }} />
+              <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                <CardActions cardType="testimonial" cardId={t._id} cardData={t.data} showEditDelete={true} />
+              </div>
+              <div className="absolute top-0 left-0 right-0 h-[1.5px]" style={{ background:`linear-gradient(90deg,${t.data?.color || '#FF6B35'},transparent)` }} />
               <div className="font-bebas text-[5rem] leading-none absolute top-[10px] right-[18px] opacity-[.06] text-[#F0EAD6] pointer-events-none">"</div>
-              <p className="text-[14px] font-light leading-[1.85] italic mb-5 relative z-[1]" style={{ color:"rgba(240,234,214,.7)" }}>{t.q}</p>
+              <p className="text-[14px] font-light leading-[1.85] italic mb-5 relative z-[1]" style={{ color:"rgba(240,234,214,.7)" }}>"<EditableText contentId={`testimonial.${t._id}.q`} textColor="rgba(240,234,214,.7)">{t.data?.q || 'Testimonial quote'}</EditableText>"</p>
               <div className="h-px mb-4" style={{ background:"rgba(255,255,255,.07)" }} />
               <div className="flex items-center gap-3">
                 <div className="w-[38px] h-[38px] rounded-full flex items-center justify-center font-syne text-[11px] font-bold flex-shrink-0"
-                     style={{ background:"rgba(0,0,0,.4)", border:`1px solid ${t.color}44`, color:t.color }}>{t.init}</div>
+                     style={{ background:"rgba(0,0,0,.4)", border:`1px solid ${t.data?.color || '#FF6B35'}44`, color:t.data?.color || '#FF6B35' }}>{t.data?.init || 'XX'}</div>
                 <div>
-                  <div className="font-syne text-[12px] font-bold mb-0.5 text-[#F0EAD6]">{t.name}</div>
-                  <div className="text-[11px] font-light" style={{ color:"rgba(240,234,214,.38)" }}>{t.role}</div>
+                  <div className="font-syne text-[12px] font-bold mb-0.5 text-[#F0EAD6]"><EditableText contentId={`testimonial.${t._id}.name`} textColor="#F0EAD6">{t.data?.name || 'Student'}</EditableText></div>
+                  <div className="text-[11px] font-light" style={{ color:"rgba(240,234,214,.38)" }}><EditableText contentId={`testimonial.${t._id}.role`} textColor="rgba(240,234,214,.38)">{t.data?.role || 'Role'}</EditableText></div>
                 </div>
               </div>
             </div>
@@ -715,12 +872,12 @@ function CTA() {
         <div className="absolute right-[-40px] top-1/2 -translate-y-1/2 w-[300px] h-[200px] rounded-full pointer-events-none"
              style={{ background:"radial-gradient(ellipse,rgba(255,107,53,.1) 0%,transparent 70%)" }} />
         <div className="relative z-[1]">
-          <div className="font-syne text-[9px] font-bold tracking-[.38em] uppercase text-[#FF6B35] mb-3">Your Turn</div>
+          <div className="font-syne text-[9px] font-bold tracking-[.38em] uppercase text-[#FF6B35] mb-3"><EditableText contentId="achievements.cta.badge">Your Turn</EditableText></div>
           <h2 className="font-bebas text-[clamp(28px,4vw,52px)] leading-[.92] tracking-[-0.01em] mb-3 text-[#F0EAD6]">
-            Ready to build<br />your own robot?
+            <EditableText contentId="achievements.cta.title">Ready to build<br />your own robot?</EditableText>
           </h2>
           <p className="text-[14px] font-light leading-[1.75]" style={{ color:"rgba(240,234,214,.48)", maxWidth:440 }}>
-            Every achievement on this page started with a single enrollment. Join 6,200+ students already building the future at Nimo Labs, Bhopal.
+            <EditableText contentId="achievements.cta.description">Every achievement on this page started with a single enrollment. Join 6,200+ students already building the future at Nimo Labs, Bhopal.</EditableText>
           </p>
         </div>
         <div className="flex gap-3 flex-wrap flex-shrink-0 relative z-[1]">
@@ -728,13 +885,13 @@ function CTA() {
                   style={{ background:"#FF6B35", boxShadow:"0 0 24px rgba(255,107,53,.25)" }}
                   onMouseEnter={e => { e.target.style.background="#ff8040"; e.target.style.boxShadow="0 0 40px rgba(255,107,53,.5)"; e.target.style.transform="translateY(-1px)"; }}
                   onMouseLeave={e => { e.target.style.background="#FF6B35"; e.target.style.boxShadow="0 0 24px rgba(255,107,53,.25)"; e.target.style.transform="none"; }}>
-            Enroll Now →
+            <EditableText contentId="achievements.cta.button-primary">Enroll Now →</EditableText>
           </button>
           <button className="font-syne text-[10px] font-semibold tracking-[.32em] uppercase px-7 py-[14px] cursor-pointer transition-all duration-300"
                   style={{ background:"rgba(255,255,255,.03)", border:"1px solid rgba(255,255,255,.1)", color:"rgba(240,234,214,.5)" }}
                   onMouseEnter={e => { e.target.style.borderColor="#00F5FF"; e.target.style.color="#00F5FF"; e.target.style.background="rgba(0,245,255,.04)"; }}
                   onMouseLeave={e => { e.target.style.borderColor="rgba(255,255,255,.1)"; e.target.style.color="rgba(240,234,214,.5)"; e.target.style.background="rgba(255,255,255,.03)"; }}>
-            View Courses
+            <EditableText contentId="achievements.cta.button-secondary">View Courses</EditableText>
           </button>
         </div>
       </div>
