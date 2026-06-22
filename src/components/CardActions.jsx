@@ -70,6 +70,56 @@ export default function CardActions({ cardType, cardId, cardData, onCardAdded, o
       icon: "🏅",
       txt: "New Certification",
       color: "#FF6B35"
+    },
+    lab: {
+      name: "New Lab",
+      icon: "⚗️",
+      color: "#FF6B35",
+      rgb: "255,107,53",
+      tagline: "Lab tagline",
+      desc: "Lab description",
+      area: "Space required",
+      capacity: "Student capacity",
+      timeline: "Setup timeline",
+      equipment: ["Equipment 1"],
+      suited: ["school"],
+      tier: "Core"
+    },
+    process: {
+      step: "0X",
+      title: "Process Step",
+      icon: "📋",
+      color: "#FF6B35",
+      rgb: "255,107,53",
+      desc: "Step description"
+    },
+    package: {
+      name: "New Package",
+      subtitle: "Package subtitle",
+      color: "#FF6B35",
+      rgb: "255,107,53",
+      price: "Price",
+      includes: ["Feature 1"],
+      suited: "Target audience",
+      highlight: false
+    },
+    whyus: {
+      icon: "⭐",
+      title: "Why Us",
+      color: "#FF6B35",
+      rgb: "255,107,53",
+      body: "Value proposition"
+    },
+    blog: {
+      tag: "Tutorial",
+      cat: "hardware",
+      title: "Blog Title",
+      excerpt: "Blog excerpt",
+      date: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }),
+      readTime: "5 min",
+      color: "#FF6B35",
+      rgb: "255,107,53",
+      featured: false
     }
   }
 

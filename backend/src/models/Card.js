@@ -4,9 +4,9 @@ const cardSchema = new mongoose.Schema(
   {
     cardType: {
       type: String,
-      enum: ['achievement', 'robot', 'star', 'testimonial', 'skill', 'cert', 'photo'],
+      enum: ['achievement', 'robot', 'star', 'testimonial', 'skill', 'cert', 'photo', 'lab', 'process', 'package', 'whyus', 'blog'],
       required: true,
-      description: 'Type of card (achievement, robot, star, testimonial, skill, cert, photo)',
+      description: 'Type of card (achievement, robot, star, testimonial, skill, cert, photo, lab, process, package, whyus, blog)',
     },
     page: {
       type: String,

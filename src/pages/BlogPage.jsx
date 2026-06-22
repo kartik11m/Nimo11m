@@ -1,5 +1,7 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Link } from 'react-router-dom'
+import { useOwnerAuth } from '../context/OwnerAuthContext'
+import CardActions from '../components/CardActions'
 
 const bebasNeue = { fontFamily: "'Bebas Neue', sans-serif" }
 const syne      = { fontFamily: "'Syne', sans-serif" }
@@ -23,71 +25,23 @@ const nimoImages = [
 
 const getImageForPost = (id) => nimoImages[(id - 1) % nimoImages.length]
 
-// ── ALL POSTS ─────────────────────────────────────────────────────
-const allPosts = [
-  {
-    id: 1, tag: 'Tutorial',  cat: 'hardware',
-    title: 'Building a PID Controller on Arduino From Absolute Zero',
-    excerpt: 'PID looks scary on paper. We break it down with real code, an oscilloscope trace, and a motor that actually behaves. No maths degree required.',
-    date: 'May 14, 2025', readTime: '8 min', color: '#FF6B35', rgb: '255,107,53',
-    img: getImageForPost(1), featured: true,
-  },
-  {
-    id: 2, tag: 'Deep Dive', cat: 'iot',
-    title: 'ESP-NOW vs MQTT: Which Protocol Wins for Your Robot?',
-    excerpt: 'We ran both protocols on identical hardware and measured latency, range, and reliability. The results might surprise you.',
-    date: 'May 8, 2025', readTime: '6 min', color: '#00F5FF', rgb: '0,245,255',
-    img: getImageForPost(2), featured: false,
-  },
-  {
-    id: 3, tag: 'Project',   cat: 'ai',
-    title: 'Running TFLite Object Detection at 30fps on a Raspberry Pi 4',
-    excerpt: 'Step-by-step: quantize a MobileNet model, deploy it on RPi, and stream live inference video. All offline, zero cloud.',
-    date: 'April 29, 2025', readTime: '11 min', color: '#A855F7', rgb: '168,85,247',
-    img: getImageForPost(3), featured: false,
-  },
-  {
-    id: 4, tag: 'Guide',     cat: 'hardware',
-    title: "Your First PCB in KiCad: Schematic to Gerber in One Afternoon",
-    excerpt: 'A practical walkthrough that skips the theory and gets you to a manufacturable board as fast as possible.',
-    date: 'April 21, 2025', readTime: '9 min', color: '#FF006E', rgb: '255,0,110',
-    img: getImageForPost(4), featured: false,
-  },
-  {
-    id: 5, tag: 'Tutorial',  cat: 'robotics',
-    title: 'SLAM in 30 Minutes: Mapping a Room with a Raspberry Pi and RPLidar',
-    excerpt: 'Set up ROS2, hook up the LiDAR, and watch your robot draw a real-time map of its environment. Fewer steps than you think.',
-    date: 'April 12, 2025', readTime: '14 min', color: '#A855F7', rgb: '168,85,247',
-    img: getImageForPost(5), featured: false,
-  },
-  {
-    id: 6, tag: 'Explainer', cat: 'hardware',
-    title: 'I2C vs SPI vs UART: When to Use Each Protocol on Arduino',
-    excerpt: 'Three serial protocols, three use cases, zero confusion. We show real wiring, real code, and when each protocol will save or wreck your project.',
-    date: 'April 5, 2025', readTime: '7 min', color: '#FF6B35', rgb: '255,107,53',
-    img: getImageForPost(6), featured: false,
-  },
-  {
-    id: 7, tag: 'Project',   cat: 'iot',
-    title: 'Building a Smart Lab Monitor with ESP32, DHT22, and Grafana',
-    excerpt: 'Temperature, humidity, and CO₂ data streamed to a live Grafana dashboard over MQTT. A weekend build that actually runs in our lab.',
-    date: 'March 28, 2025', readTime: '10 min', color: '#00F5FF', rgb: '0,245,255',
-    img: getImageForPost(7), featured: false,
-  },
-  {
-    id: 8, tag: 'Guide',     cat: 'ai',
-    title: 'Training a Custom Gesture Classifier with TensorFlow and Your Webcam',
-    excerpt: 'Collect your own dataset, train in Colab, quantize with TFLite, and deploy to a Pi in an afternoon. Real model, real gestures.',
-    date: 'March 20, 2025', readTime: '12 min', color: '#A855F7', rgb: '168,85,247',
-    img: getImageForPost(8), featured: false,
-  },
-  {
-    id: 9, tag: 'Deep Dive', cat: 'robotics',
-    title: 'ROS2 Node Communication Patterns You Actually Need',
-    excerpt: 'Topics, services, actions — most tutorials explain what they are. We explain when to use which, with architecture diagrams from real student projects.',
-    date: 'March 10, 2025', readTime: '9 min', color: '#FF6B35', rgb: '255,107,53',
-    img: getImageForPost(9), featured: false,
-  },
+// ── FALLBACK ALL POSTS ────────────────────────────────────────────
+const FALLBACK_POSTS = [
+  { id:1, tag:'Tutorial', cat:'hardware', title:'Building a PID Controller on Arduino From Absolute Zero', excerpt:'PID looks scary on paper. We break it down with real code, an oscilloscope trace, and a motor that actually behaves. No maths degree required.', date:'May 14, 2025', readTime:'8 min', color:'#FF6B35', rgb:'255,107,53', img:getImageForPost(1), featured:true },
+  { id:2, tag:'Deep Dive', cat:'iot', title:'ESP-NOW vs MQTT: Which Protocol Wins for Your Robot?', excerpt:'We ran both protocols on identical hardware and measured latency, range, and reliability. The results might surprise you.', date:'May 8, 2025', readTime:'6 min', color:'#00F5FF', rgb:'0,245,255', img:getImageForPost(2), featured:false },
+  { id:3, tag:'Project', cat:'ai', title:'Running TFLite Object Detection at 30fps on a Raspberry Pi 4', excerpt:'Step-by-step: quantize a MobileNet model, deploy it on RPi, and stream live inference video. All offline, zero cloud.', date:'April 29, 2025', readTime:'11 min', color:'#A855F7', rgb:'168,85,247', img:getImageForPost(3), featured:false },
+  { id:4, tag:'Guide', cat:'hardware', title:"Your First PCB in KiCad: Schematic to Gerber in One Afternoon", excerpt:'A practical walkthrough that skips the theory and gets you to a manufacturable board as fast as possible.', date:'April 21, 2025', readTime:'9 min', color:'#FF006E', rgb:'255,0,110', img:getImageForPost(4), featured:false },
+  { id:5, tag:'Tutorial', cat:'robotics', title:'SLAM in 30 Minutes: Mapping a Room with a Raspberry Pi and RPLidar', excerpt:'Set up ROS2, hook up the LiDAR, and watch your robot draw a real-time map of its environment. Fewer steps than you think.', date:'April 12, 2025', readTime:'14 min', color:'#A855F7', rgb:'168,85,247', img:getImageForPost(5), featured:false },
+  { id:6, tag:'Explainer', cat:'hardware', title:'I2C vs SPI vs UART: When to Use Each Protocol on Arduino', excerpt:'Three serial protocols, three use cases, zero confusion. We show real wiring, real code, and when each protocol will save or wreck your project.', date:'April 5, 2025', readTime:'7 min', color:'#FF6B35', rgb:'255,107,53', img:getImageForPost(6), featured:false },
+  { id:7, tag:'Project', cat:'iot', title:'Building a Smart Lab Monitor with ESP32, DHT22, and Grafana', excerpt:'Temperature, humidity, and CO₂ data streamed to a live Grafana dashboard over MQTT. A weekend build that actually runs in our lab.', date:'March 28, 2025', readTime:'10 min', color:'#00F5FF', rgb:'0,245,255', img:getImageForPost(7), featured:false },
+  { id:8, tag:'Guide', cat:'ai', title:'Training a Custom Gesture Classifier with TensorFlow and Your Webcam', excerpt:'Collect your own dataset, train in Colab, quantize with TFLite, and deploy to a Pi in an afternoon. Real model, real gestures.', date:'March 20, 2025', readTime:'12 min', color:'#A855F7', rgb:'168,85,247', img:getImageForPost(8), featured:false },
+  { id:9, tag:'Deep Dive', cat:'robotics', title:'ROS2 Node Communication Patterns You Actually Need', excerpt:'Topics, services, actions — most tutorials explain what they are. We explain when to use which, with architecture diagrams from real student projects.', date:'March 10, 2025', readTime:'9 min', color:'#FF6B35', rgb:'255,107,53', img:getImageForPost(9), featured:false },
+  { id:10, tag:'Tutorial', cat:'iot', title:'Building Real-Time IoT Dashboards with InfluxDB and Grafana', excerpt:'Store sensor data efficiently, query it, and visualize on beautiful dashboards. Perfect for monitoring your lab or home setup.', date:'March 2, 2025', readTime:'10 min', color:'#00F5FF', rgb:'0,245,255', img:getImageForPost(10), featured:false },
+  { id:11, tag:'Project', cat:'hardware', title:'Custom Motion Tracking Robot Using OpenCV and Servo Motors', excerpt:'Build a turret that follows moving objects in real-time. Computer vision + servo control = hours of fun and learning.', date:'February 22, 2025', readTime:'13 min', color:'#FF006E', rgb:'255,0,110', img:getImageForPost(11), featured:false },
+  { id:12, tag:'Explainer', cat:'ai', title:'How Convolutional Neural Networks See Images (Visualized)', excerpt:'CNNs seem magical until you understand feature maps, pooling, and activation. We show you the actual math with interactive examples.', date:'February 14, 2025', readTime:'10 min', color:'#A855F7', rgb:'168,85,247', img:getImageForPost(12), featured:false },
+  { id:13, tag:'Guide', cat:'robotics', title:'Setting Up a Multi-Robot ROS2 Network Over WiFi', excerpt:'Communication between multiple robots is tricky. This guide covers networking, time sync, message passing, and debugging tips we learned the hard way.', date:'February 5, 2025', readTime:'11 min', color:'#FF6B35', rgb:'255,107,53', img:getImageForPost(1), featured:false },
+  { id:14, tag:'Project', cat:'ai', title:'Building a Voice-Controlled Arduino with ML on Edge', excerpt:'Train a keyword detector, quantize it with TFLite, and run it on Arduino Nano 33. Voice commands without WiFi or cloud.', date:'January 28, 2025', readTime:'9 min', color:'#00F5FF', rgb:'0,245,255', img:getImageForPost(2), featured:false },
+  { id:15, tag:'Deep Dive', cat:'hardware', title:'Debugging Electrical Problems: Why Your Circuit Isnt Working', excerpt:'Oscilloscope basics, multimeter tricks, and systematic debugging strategies that always find the culprit — shorts, noise, or components gone bad.', date:'January 18, 2025', readTime:'12 min', color:'#A855F7', rgb:'168,85,247', img:getImageForPost(3), featured:false },
 ]
 
 const PAGE_SIZE = 6
@@ -101,17 +55,16 @@ const filterTabs = [
 ]
 
 // ── Post card ─────────────────────────────────────────────────────
-function PostCard({ post, large = false }) {
+function PostCard({ post, large = false, isOwner, onEdit, onDelete }) {
   const [hov, setHov] = useState(false)
+  const data = post.data || post
 
   return (
-    <Link
-      to={`/blog/${post.id}`}
-      className={`relative flex flex-col overflow-hidden no-underline h-full ${large ? '' : ''}`}
+    <div className="relative flex flex-col overflow-hidden h-full"
       style={{
         background:  hov ? 'rgba(255,255,255,.04)' : 'rgba(255,255,255,.025)',
-        border:      `1px solid ${hov ? `rgba(${post.rgb},.5)` : 'rgba(255,255,255,.07)'}`,
-        boxShadow:   hov ? `0 0 40px rgba(${post.rgb},.14), 0 24px 48px rgba(0,0,0,.5)` : 'none',
+        border:      `1px solid ${hov ? `rgba(${data.rgb},.5)` : 'rgba(255,255,255,.07)'}`,
+        boxShadow:   hov ? `0 0 40px rgba(${data.rgb},.14), 0 24px 48px rgba(0,0,0,.5)` : 'none',
         transform:   hov ? 'translateY(-5px)' : 'none',
         transition:  'all .45s cubic-bezier(.23,1,.32,1)',
       }}
@@ -120,12 +73,12 @@ function PostCard({ post, large = false }) {
     >
       {/* Accent bar */}
       <div className="absolute top-0 left-0 right-0 h-[2px] z-10" style={{
-        background: post.color, transform: hov ? 'scaleX(1)' : 'scaleX(0)',
+        background: data.color, transform: hov ? 'scaleX(1)' : 'scaleX(0)',
         transformOrigin: 'left', transition: 'transform .45s ease',
       }} />
       {/* Corner TL */}
       <div className="absolute top-0 left-0 w-5 h-5 z-10" style={{
-        borderTop: `1px solid ${post.color}`, borderLeft: `1px solid ${post.color}`,
+        borderTop: `1px solid ${data.color}`, borderLeft: `1px solid ${data.color}`,
         opacity: hov ? 1 : 0, transition: 'opacity .3s ease',
       }} />
       {/* Corner BR */}
@@ -136,7 +89,7 @@ function PostCard({ post, large = false }) {
 
       {/* Thumbnail */}
       <div className="relative overflow-hidden flex-shrink-0" style={{ height: large ? 260 : 180 }}>
-        <img src={post.img} alt={post.title}
+        <img src={data.img} alt={data.title}
           className="w-full h-full object-cover"
           style={{ transform: hov ? 'scale(1.06)' : 'scale(1)', transition: 'transform .6s ease' }}
         />
@@ -153,13 +106,13 @@ function PostCard({ post, large = false }) {
         {/* Tag + read time */}
         <div className="flex items-center gap-3 mb-3">
           <div className="inline-flex items-center gap-1.5 px-2.5 py-[5px] border"
-            style={{ background: `rgba(${post.rgb},.08)`, borderColor: `rgba(${post.rgb},.28)` }}>
-            <span className="w-[5px] h-[5px] rounded-full" style={{ background: post.color }} />
+            style={{ background: `rgba(${data.rgb},.08)`, borderColor: `rgba(${data.rgb},.28)` }}>
+            <span className="w-[5px] h-[5px] rounded-full" style={{ background: data.color }} />
             <span className="text-[7px] font-bold tracking-[.38em] uppercase"
-              style={{ ...syne, color: post.color }}>{post.tag}</span>
+              style={{ ...syne, color: data.color }}>{data.tag}</span>
           </div>
           <span className="text-[8px] font-light text-[#F0EAD6]/28 tracking-[.04em]" style={dmSans}>
-            {post.readTime} read
+            {data.readTime} read
           </span>
         </div>
 
@@ -170,49 +123,81 @@ function PostCard({ post, large = false }) {
             ...syne,
             fontSize: large ? 'clamp(17px,2vw,22px)' : '15px',
             fontWeight: 700,
-            color: hov ? post.color : 'rgba(240,234,214,.88)',
+            color: hov ? data.color : 'rgba(240,234,214,.88)',
             transition: 'color .3s ease',
           }}
         >
-          {post.title}
+          {data.title}
         </h3>
 
         {large && (
           <p className="text-[12px] font-light text-[#F0EAD6]/45 leading-[1.8] mb-4" style={dmSans}>
-            {post.excerpt}
+            {data.excerpt}
           </p>
         )}
 
-        {/* Footer */}
-        <div className="flex items-center justify-between pt-3 border-t border-white/[.055] mt-auto">
-          <span className="text-[10px] font-light text-[#F0EAD6]/28 tracking-[.03em]" style={dmSans}>
-            {post.date}
-          </span>
-          <span className="text-[9px] font-bold tracking-[.28em] uppercase transition-colors duration-300"
-            style={{ ...syne, color: hov ? post.color : 'rgba(240,234,214,.3)' }}>
-            Read →
-          </span>
-        </div>
+        {/* Footer or Edit/Delete */}
+        {isOwner && hov ? (
+          <div className="flex gap-2">
+            <button onClick={onEdit} className="text-lg hover:scale-110 transition-transform">✎</button>
+            <button onClick={onDelete} className="text-lg hover:scale-110 transition-transform">🗑</button>
+          </div>
+        ) : (
+          <div className="flex items-center justify-between pt-3 border-t border-white/[.055] mt-auto">
+            <span className="text-[10px] font-light text-[#F0EAD6]/28 tracking-[.03em]" style={dmSans}>
+              {data.date}
+            </span>
+            <span className="text-[9px] font-bold tracking-[.28em] uppercase transition-colors duration-300"
+              style={{ ...syne, color: hov ? data.color : 'rgba(240,234,214,.3)' }}>
+              Read →
+            </span>
+          </div>
+        )}
       </div>
-    </Link>
+    </div>
   )
 }
 
 // ── MAIN PAGE ─────────────────────────────────────────────────────
 export default function BlogPage() {
+  const { getCards, isOwner, deleteCard } = useOwnerAuth()
   const [activeFilter, setActiveFilter] = useState('all')
   const [page,         setPage]         = useState(1)
+  const [blogsData, setBlogsData] = useState(FALLBACK_POSTS.map((b, idx) => ({ _id:`blog-${idx}`, data:b })))
+
+  useEffect(() => {
+    const loadBlogs = async () => {
+      try {
+        const data = await getCards('blog', 'explore')
+        if (data?.length > 0) setBlogsData(data)
+      } catch (error) {
+        console.error('Failed to load blogs:', error)
+      }
+    }
+    loadBlogs()
+  }, [getCards])
 
   const filtered = useMemo(() => {
-    const base = activeFilter === 'all' ? allPosts : allPosts.filter(p => p.cat === activeFilter)
+    const base = activeFilter === 'all' 
+      ? blogsData 
+      : blogsData.filter(b => {
+          const blogData = b.data || b
+          return blogData.cat === activeFilter
+        })
     return base
-  }, [activeFilter])
+  }, [activeFilter, blogsData])
 
   const visible  = filtered.slice(0, page * PAGE_SIZE)
   const hasMore  = visible.length < filtered.length
 
-  const featured = allPosts.find(p => p.featured)
-  const rest     = allPosts.filter(p => !p.featured)
+  const featured = blogsData.find(b => {
+    const blogData = b.data || b
+    return blogData.featured
+  })
+  const rest     = blogsData.filter(b => {
+    const blogData = b.data || b
+    return !blogData.featured
+  })
 
   return (
     <main className="bg-[#050508] text-[#F0EAD6] overflow-x-hidden" style={dmSans}>
@@ -270,7 +255,7 @@ export default function BlogPage() {
                 style={{ background: 'linear-gradient(90deg,#FF6B35,rgba(168,85,247,.4),transparent)' }} />
               <div className="space-y-4">
                 {[
-                  { num: `${allPosts.length}+`, label: 'Articles Published', color: '#FF6B35' },
+                  { num: `${blogsData.length}+`, label: 'Articles Published', color: '#FF6B35' },
                   { num: '4',    label: 'New Posts / Month', color: '#00F5FF' },
                   { num: 'Free', label: 'Always Free to Read', color: '#A855F7' },
                 ].map(s => (
@@ -303,7 +288,15 @@ export default function BlogPage() {
             </span>
           </div>
           <div className="max-w-3xl">
-            <PostCard post={featured} large />
+            {featured && (
+              <PostCard 
+                post={featured} 
+                large 
+                isOwner={isOwner}
+                onEdit={() => console.log('Edit blog post')}
+                onDelete={() => deleteCard(featured._id)}
+              />
+            )}
           </div>
         </div>
       </section>
@@ -361,8 +354,25 @@ export default function BlogPage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mb-10">
+              {/* Add Blog Button */}
+              {isOwner && (
+                <div className="relative flex flex-col overflow-hidden border border-dashed border-white/[.2] hover:border-[#FF6B35] transition-all duration-300 h-full">
+                  <CardActions
+                    cardType="blog"
+                    cardData={{ tag:'', cat:'hardware', title:'', excerpt:'', date:'', readTime:'', color:'#FF6B35', rgb:'255,107,53', featured:false }}
+                    showAddButton={true}
+                    showEditDelete={false}
+                  />
+                </div>
+              )}
               {visible.map(post => (
-                <PostCard key={post.id} post={post} />
+                <PostCard 
+                  key={post._id} 
+                  post={post} 
+                  isOwner={isOwner}
+                  onEdit={() => console.log('Edit blog')}
+                  onDelete={() => deleteCard(post._id)}
+                />
               ))}
             </div>
           )}
