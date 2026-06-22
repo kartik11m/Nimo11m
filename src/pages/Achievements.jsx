@@ -4,7 +4,7 @@
 //   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;600;700;800&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet" />
 // GSAP: npm install gsap
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import EditableText from "../components/EditableText";
@@ -257,7 +257,7 @@ function Hero() {
 }
 
 /* ─── FILM STRIP GALLERY ─────────────────────────────────────────────────────── */
-function PhotoCard({ p, showEditDelete }) {
+function PhotoCard({ p, showEditDelete, refreshPhotos }) {
   const [hovered, setHovered] = useState(false);
   const hasImage = !!p.data?.src;
   return (
@@ -267,7 +267,14 @@ function PhotoCard({ p, showEditDelete }) {
          onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>
       {showEditDelete && (
         <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-20">
-          <CardActions cardType="photo" cardId={p._id} cardData={p.data} showEditDelete={true} />
+          <CardActions
+            cardType="photo"
+            cardId={p._id}
+            cardData={p.data}
+            showEditDelete={true}
+            onCardAdded={refreshPhotos}
+            onCardDeleted={refreshPhotos}
+          />
         </div>
       )}
       {hasImage && (
@@ -302,22 +309,25 @@ function Gallery() {
   const [row1Photos, setRow1Photos] = useState(PHOTOS1.map((p, idx) => ({ _id: `photo-row1-${idx}`, data: p })));
   const [row2Photos, setRow2Photos] = useState(PHOTOS2.map((p, idx) => ({ _id: `photo-row2-${idx}`, data: p })));
 
-  useEffect(() => {
-    const loadPhotos = async () => {
-      try {
-        const data = await getCards('photo');
-        if (data && data.length > 0) {
-          // Split into two rows (first half and second half)
-          const mid = Math.ceil(data.length / 2);
-          setRow1Photos(data.slice(0, mid));
-          setRow2Photos(data.slice(mid));
-        }
-      } catch (error) {
-        console.error('Failed to load photos:', error);
+  const loadPhotos = useCallback(async () => {
+    try {
+      const data = await getCards('photo');
+      if (data && data.length > 0) {
+        const mid = Math.ceil(data.length / 2);
+        setRow1Photos(data.slice(0, mid));
+        setRow2Photos(data.slice(mid));
+        return;
       }
-    };
-    loadPhotos();
+    } catch (error) {
+      console.error('Failed to load photos:', error);
+    }
+    setRow1Photos(PHOTOS1.map((p, idx) => ({ _id: `photo-row1-${idx}`, data: p })));
+    setRow2Photos(PHOTOS2.map((p, idx) => ({ _id: `photo-row2-${idx}`, data: p })));
   }, [getCards]);
+
+  useEffect(() => {
+    loadPhotos();
+  }, [loadPhotos]);
 
   return (
     <section id="gallery" className="overflow-hidden" style={{ background:"#020204" }}>
@@ -329,7 +339,7 @@ function Gallery() {
           <EditableText contentId="achievements.gallery.description">Hundreds of hours of building, soldering, debugging — and finally, making it work. Here's what that looks like.</EditableText>
         </p>
         <div className="mt-4">
-          <CardActions cardType="photo" showAddButton={true} />
+          <CardActions cardType="photo" showAddButton={true} onCardAdded={loadPhotos} />
         </div>
       </div>
       {/* Row 1 */}
@@ -337,7 +347,7 @@ function Gallery() {
         <Sprockets />
         <div className="overflow-hidden film-row-outer" style={{ background:"#0a0a0e" }}>
           <div className="flex gap-2 py-2 anim-filmR" style={{ width:"max-content", padding:"4px 48px" }}>
-            {[...row1Photos,...row1Photos].map((p,i) => <PhotoCard key={`${p._id}-${i}`} p={p} showEditDelete={true} />)}
+            {[...row1Photos,...row1Photos].map((p,i) => <PhotoCard key={`${p._id}-${i}`} p={p} showEditDelete={true} refreshPhotos={loadPhotos} />)}
           </div>
         </div>
         <Sprockets />
@@ -353,7 +363,7 @@ function Gallery() {
         <Sprockets />
         <div className="overflow-hidden film-row-outer" style={{ background:"#0a0a0e" }}>
           <div className="flex gap-2 py-2 anim-filmL" style={{ width:"max-content", padding:"4px 48px" }}>
-            {[...row2Photos,...row2Photos].map((p,i) => <PhotoCard key={`${p._id}-${i}`} p={p} showEditDelete={true} />)}
+            {[...row2Photos,...row2Photos].map((p,i) => <PhotoCard key={`${p._id}-${i}`} p={p} showEditDelete={true} refreshPhotos={loadPhotos} />)}
           </div>
         </div>
         <Sprockets />

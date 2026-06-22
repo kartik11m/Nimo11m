@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { useOwnerAuth } from '../context/OwnerAuthContext'
 import CardActions from '../components/CardActions'
@@ -55,9 +55,10 @@ const filterTabs = [
 ]
 
 // ── Post card ─────────────────────────────────────────────────────
-function PostCard({ post, large = false, isOwner, onEdit, onDelete }) {
+function PostCard({ post, large = false, isOwner, hideOwnerActions = false, onEdit, onDelete }) {
   const [hov, setHov] = useState(false)
   const data = post.data || post
+  const imageSrc = data.img || data.src || '/Nimo-images/WhatsApp Image 2026-06-05 at 9.17.01 PM.jpeg'
 
   return (
     <div className="relative flex flex-col overflow-hidden h-full"
@@ -89,7 +90,7 @@ function PostCard({ post, large = false, isOwner, onEdit, onDelete }) {
 
       {/* Thumbnail */}
       <div className="relative overflow-hidden flex-shrink-0" style={{ height: large ? 260 : 180 }}>
-        <img src={data.img} alt={data.title}
+        <img src={imageSrc} alt={data.title}
           className="w-full h-full object-cover"
           style={{ transform: hov ? 'scale(1.06)' : 'scale(1)', transition: 'transform .6s ease' }}
         />
@@ -137,7 +138,7 @@ function PostCard({ post, large = false, isOwner, onEdit, onDelete }) {
         )}
 
         {/* Footer or Edit/Delete */}
-        {isOwner && hov ? (
+        {isOwner && hov && !hideOwnerActions ? (
           <div className="flex gap-2">
             <button onClick={onEdit} className="text-lg hover:scale-110 transition-transform">✎</button>
             <button onClick={onDelete} className="text-lg hover:scale-110 transition-transform">🗑</button>
@@ -165,17 +166,18 @@ export default function BlogPage() {
   const [page,         setPage]         = useState(1)
   const [blogsData, setBlogsData] = useState(FALLBACK_POSTS.map((b, idx) => ({ _id:`blog-${idx}`, data:b })))
 
-  useEffect(() => {
-    const loadBlogs = async () => {
-      try {
-        const data = await getCards('blog', 'explore')
-        if (data?.length > 0) setBlogsData(data)
-      } catch (error) {
-        console.error('Failed to load blogs:', error)
-      }
+  const loadBlogs = useCallback(async () => {
+    try {
+      const data = await getCards('blog', 'explore')
+      if (data?.length > 0) setBlogsData(data)
+    } catch (error) {
+      console.error('Failed to load blogs:', error)
     }
-    loadBlogs()
   }, [getCards])
+
+  useEffect(() => {
+    loadBlogs()
+  }, [loadBlogs])
 
   const filtered = useMemo(() => {
     const base = activeFilter === 'all' 
@@ -289,13 +291,27 @@ export default function BlogPage() {
           </div>
           <div className="max-w-3xl">
             {featured && (
-              <PostCard 
-                post={featured} 
-                large 
-                isOwner={isOwner}
-                onEdit={() => console.log('Edit blog post')}
-                onDelete={() => deleteCard(featured._id)}
-              />
+              <div className="relative">
+                <PostCard 
+                  post={featured} 
+                  large 
+                  isOwner={isOwner}
+                  hideOwnerActions={isOwner}
+                />
+                {isOwner && (
+                  <div className="absolute top-4 right-4 z-20">
+                    <CardActions
+                      cardType="blog"
+                      cardId={featured._id}
+                      cardData={featured.data}
+                      showAddButton={false}
+                      showEditDelete={true}
+                      onCardDeleted={loadBlogs}
+                      onCardAdded={loadBlogs}
+                    />
+                  </div>
+                )}
+              </div>
             )}
           </div>
         </div>
@@ -359,20 +375,34 @@ export default function BlogPage() {
                 <div className="relative flex flex-col overflow-hidden border border-dashed border-white/[.2] hover:border-[#FF6B35] transition-all duration-300 h-full">
                   <CardActions
                     cardType="blog"
-                    cardData={{ tag:'', cat:'hardware', title:'', excerpt:'', date:'', readTime:'', color:'#FF6B35', rgb:'255,107,53', featured:false }}
+                    cardData={{ tag:'', cat:'hardware', title:'', excerpt:'', date:'', readTime:'', color:'#FF6B35', rgb:'255,107,53', img:'', featured:false }}
                     showAddButton={true}
                     showEditDelete={false}
+                    onCardAdded={loadBlogs}
                   />
                 </div>
               )}
               {visible.map(post => (
-                <PostCard 
-                  key={post._id} 
-                  post={post} 
-                  isOwner={isOwner}
-                  onEdit={() => console.log('Edit blog')}
-                  onDelete={() => deleteCard(post._id)}
-                />
+                <div key={post._id} className="relative">
+                  <PostCard 
+                    post={post} 
+                    isOwner={isOwner}
+                    hideOwnerActions={isOwner}
+                  />
+                  {isOwner && (
+                    <div className="absolute top-4 right-4 z-20">
+                      <CardActions
+                        cardType="blog"
+                        cardId={post._id}
+                        cardData={post.data}
+                        showAddButton={false}
+                        showEditDelete={true}
+                        onCardDeleted={loadBlogs}
+                        onCardAdded={loadBlogs}
+                      />
+                    </div>
+                  )}
+                </div>
               ))}
             </div>
           )}

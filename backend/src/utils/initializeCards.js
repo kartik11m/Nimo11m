@@ -73,7 +73,7 @@ const DEFAULT_CARDS = {
     { id:7, name:'Drone & Drone Swarm Lab', icon:'🛸', color:'#FF6B35', rgb:'255,107,53', tagline:'Fly. Swarm. Innovate.', desc:'Multi-copter design, autonomous flight programming, and swarm coordination using ROS2 for drone racing, mapping, and autonomous missions.', area:'600–1200 sq ft', capacity:'24–40 Students', timeline:'6–8 Weeks', equipment:['Racing drones (DJI)','Custom build kits','Flight simulators','GPS & RTK modules','Swarm coordination software'], suited:['institution','government','private'], tier:'Advanced', badge:'Specialized' },
     { id:8, name:'Biotech & Biorobotics Lab', icon:'🧬', color:'#FF006E', rgb:'255,0,110', tagline:'Bio meets Bytes.', desc:'DNA sequencing, bioreactors, microfluidics, and bio-inspired robot design for exploring intersection of life sciences and robotics engineering.', area:'400–800 sq ft', capacity:'16–20 Students', timeline:'8–10 Weeks', equipment:['PCR machines','Microfluidic devices','Bioreactor systems','Microscopy setup','Bio-modeling software'], suited:['institution','government'], tier:'Government', badge:'STEM Research' },
   ],
-  processes: [
+  process: [
     { step:'01', title:'Site Assessment', icon:'📐', color:'#FF6B35', rgb:'255,107,53', desc:'Our engineers visit your campus. We evaluate space dimensions, power infrastructure, connectivity, and student flow to recommend the optimal lab layout.' },
     { step:'02', title:'Custom Blueprint', icon:'📋', color:'#00F5FF', rgb:'0,245,255', desc:'A detailed floor plan, equipment manifest, curriculum alignment document, and phased installation plan — tailored to your institution.' },
     { step:'03', title:'Professional Installation', icon:'🔧', color:'#A855F7', rgb:'168,85,247', desc:'Our certified technicians handle all hardware setup, software configuration, network integration, and safety compliance.' },
@@ -113,8 +113,12 @@ async function initializeCards() {
 
     // Initialize each card type
     for (const [cardTypeKey, cardsData] of Object.entries(DEFAULT_CARDS)) {
-      // Normalize card type: 'achievements' -> 'achievement', 'photos' -> 'photo', etc.
-      const normalizedCardType = cardTypeKey.slice(0, -1)
+      // Normalize card type: 'achievements' -> 'achievement', 'process' -> 'process', etc.
+      let normalizedCardType = cardTypeKey
+      // For keys ending in 's', try to pluralize correctly
+      if (cardTypeKey.endsWith('s') && !['process', 'whyus'].includes(cardTypeKey)) {
+        normalizedCardType = cardTypeKey.slice(0, -1)
+      }
       
       // Determine page based on card type
       const page = ['lab', 'process', 'package', 'whyus', 'blog'].includes(normalizedCardType) ? 'explore' : 'achievements'

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { useOwnerAuth } from '../context/OwnerAuthContext'
 import CardActions from '../components/CardActions'
@@ -270,13 +270,13 @@ function ProcessStep({ step, isLast, isOwner, onEdit, onDelete }) {
 }
 
 // ── Package card ───────────────────────────────────────────────────
-function PackageCard({ pkg, isOwner, onEdit, onDelete }) {
+function PackageCard({ pkg, isOwner, refreshPackages }) {
   const [hov, setHov] = useState(false)
   const data = pkg.data || pkg
   
   return (
     <div
-      className="relative flex flex-col overflow-hidden"
+      className="relative flex flex-col overflow-hidden group"
       style={{
         background:  hov ? 'rgba(255,255,255,.045)' : data.highlight ? 'rgba(255,255,255,.035)' : 'rgba(255,255,255,.02)',
         border:      `1px solid ${hov ? `rgba(${data.rgb},.52)` : data.highlight ? `rgba(${data.rgb},.28)` : 'rgba(255,255,255,.07)'}`,
@@ -288,6 +288,18 @@ function PackageCard({ pkg, isOwner, onEdit, onDelete }) {
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
     >
+      {isOwner && (
+        <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity z-20">
+          <CardActions
+            cardType="package"
+            cardId={pkg._id}
+            cardData={pkg.data}
+            showEditDelete={true}
+            onCardAdded={refreshPackages}
+            onCardDeleted={refreshPackages}
+          />
+        </div>
+      )}
       {/* Top bar */}
       <div className="absolute top-0 left-0 right-0 h-[2px]"
         style={{ background: data.color, opacity: data.highlight || hov ? 1 : 0.4 }} />
@@ -410,6 +422,15 @@ export default function LabSetupPage() {
   const [processData, setProcessData] = useState(FALLBACK_PROCESS.map((p, idx) => ({ _id:`process-${idx}`, data:p })))
   const [packagesData, setPackagesData] = useState(FALLBACK_PACKAGES.map((pkg, idx) => ({ _id:`package-${idx}`, data:pkg })))
   const [whyUsData, setWhyUsData] = useState(FALLBACK_WHYUS.map((w, idx) => ({ _id:`whyus-${idx}`, data:w })))
+
+  const loadPackages = useCallback(async () => {
+    try {
+      const packages = await getCards('package', 'explore')
+      if (packages?.length > 0) setPackagesData(packages)
+    } catch (error) {
+      console.error('Failed to load packages:', error)
+    }
+  }, [getCards])
 
   useEffect(() => {
     const loadExploreData = async () => {
@@ -712,14 +733,22 @@ export default function LabSetupPage() {
             }}>PACKAGES</span>
             <div className="w-14 h-px mt-5" style={{ background: 'linear-gradient(90deg,#FF6B35,transparent)' }} />
           </div>
+          <div className="mb-8">
+            {isOwner && (
+              <CardActions
+                cardType="package"
+                showAddButton={true}
+                onCardAdded={loadPackages}
+              />
+            )}
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             {packagesData.map(pkg => (
               <PackageCard 
                 key={pkg._id} 
                 pkg={pkg}
                 isOwner={isOwner}
-                onEdit={() => console.log('Edit package')}
-                onDelete={() => deleteCard(pkg._id)}
+                refreshPackages={loadPackages}
               />
             ))}
           </div>
