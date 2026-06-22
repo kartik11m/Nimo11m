@@ -70,6 +70,101 @@ export function OwnerAuthProvider({ children }) {
     }
   }
 
+  // ── CARD MANAGEMENT FUNCTIONS ──────────────────────────────
+  const getCards = async (cardType, page = 'achievements') => {
+    try {
+      const res = await fetch(`${API_URL}/cards?cardType=${cardType}&page=${page}`, {
+        headers: { 'Content-Type': 'application/json' },
+      })
+
+      const data = await res.json()
+      if (!data.success) throw new Error(data.message)
+      return data.data
+    } catch (error) {
+      console.error('Fetch cards failed:', error)
+      throw error
+    }
+  }
+
+  const addCard = async (cardType, cardData, page = 'achievements') => {
+    try {
+      const res = await fetch(`${API_URL}/cards`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ cardType, page, data: cardData }),
+      })
+
+      const data = await res.json()
+      if (!data.success) throw new Error(data.message)
+      return data.data
+    } catch (error) {
+      console.error('Add card failed:', error)
+      throw error
+    }
+  }
+
+  const updateCard = async (cardId, cardData) => {
+    try {
+      const res = await fetch(`${API_URL}/cards/${cardId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ data: cardData }),
+      })
+
+      const data = await res.json()
+      if (!data.success) throw new Error(data.message)
+      return data.data
+    } catch (error) {
+      console.error('Update card failed:', error)
+      throw error
+    }
+  }
+
+  const deleteCard = async (cardId) => {
+    try {
+      const res = await fetch(`${API_URL}/cards/${cardId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      const data = await res.json()
+      if (!data.success) throw new Error(data.message)
+      return data
+    } catch (error) {
+      console.error('Delete card failed:', error)
+      throw error
+    }
+  }
+
+  const reorderCards = async (cardType, page, cardIds) => {
+    try {
+      const res = await fetch(`${API_URL}/cards/reorder`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ cardType, page, cardIds }),
+      })
+
+      const data = await res.json()
+      if (!data.success) throw new Error(data.message)
+      return data.data
+    } catch (error) {
+      console.error('Reorder cards failed:', error)
+      throw error
+    }
+  }
+
   const value = {
     isOwner,
     token,
@@ -77,6 +172,11 @@ export function OwnerAuthProvider({ children }) {
     login,
     logout,
     updateContent,
+    getCards,
+    addCard,
+    updateCard,
+    deleteCard,
+    reorderCards,
   }
 
   return (
