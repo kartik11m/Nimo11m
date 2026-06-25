@@ -70,6 +70,41 @@ export function OwnerAuthProvider({ children }) {
     }
   }
 
+  const getPageContent = async (page) => {
+    try {
+      const res = await fetch(`${API_URL}/content/${page}`, {
+        headers: { 'Content-Type': 'application/json' },
+      })
+
+      const data = await res.json()
+      if (!data.success) throw new Error(data.message)
+      return data.content || []
+    } catch (error) {
+      console.error('Fetch page content failed:', error)
+      throw error
+    }
+  }
+
+  const savePageContent = async (page, key, value, label = key) => {
+    try {
+      const res = await fetch(`${API_URL}/content/${key}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ page, label, content: value }),
+      })
+
+      const data = await res.json()
+      if (!data.success) throw new Error(data.message)
+      return data.content
+    } catch (error) {
+      console.error('Save page content failed:', error)
+      throw error
+    }
+  }
+
   // ── CARD MANAGEMENT FUNCTIONS ──────────────────────────────
   const getCards = async (cardType, page = 'achievements') => {
     try {
@@ -172,6 +207,8 @@ export function OwnerAuthProvider({ children }) {
     login,
     logout,
     updateContent,
+    getPageContent,
+    savePageContent,
     getCards,
     addCard,
     updateCard,
