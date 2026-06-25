@@ -106,9 +106,9 @@ function LabCard({ lab, filtered, showEditDelete, isOwner }) {
         borderTop: `1px solid ${data.color}`, borderLeft: `1px solid ${data.color}`,
         opacity: hov && !dimmed ? 1 : 0, transition: 'opacity .3s ease',
       }} />
-      {/* Tier badge */}
+      {/* Badge (moved down to avoid tier overlap) */}
       {data.badge && (
-        <div className="absolute top-3 right-3"
+        <div className="absolute top-10 right-3"
           style={{ background: `rgba(${data.rgb},.12)`, border: `1px solid rgba(${data.rgb},.3)`, padding: '2px 8px' }}>
           <span className="text-[7px] font-bold tracking-[.3em] uppercase" style={{ ...syne, color: data.color }}>
             {data.badge}
@@ -305,7 +305,7 @@ function PackageCard({ pkg, isOwner, refreshPackages }) {
         style={{ background: data.color, opacity: data.highlight || hov ? 1 : 0.4 }} />
       {/* Popular badge */}
       {data.highlight && (
-        <div className="absolute top-4 right-4"
+        <div className="absolute top-11 right-4"
           style={{ background: `rgba(${data.rgb},.12)`, border: `1px solid rgba(${data.rgb},.3)`, padding: '3px 10px' }}>
           <span className="text-[7px] font-bold tracking-[.35em] uppercase" style={{ ...syne, color: data.color }}>
             Most Popular
