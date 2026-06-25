@@ -19,7 +19,7 @@ const contentSchema = new mongoose.Schema(
       default: 'text',
     },
     content: {
-      type: String,
+      type: mongoose.Schema.Types.Mixed,
       required: true,
     },
     page: {
