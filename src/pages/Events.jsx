@@ -2,6 +2,7 @@ import { useEffect, useState, useRef, useMemo } from 'react'
 import { useOwnerAuth } from '../context/OwnerAuthContext'
 import AddEventButton from '../components/AddEventButton'
 import EditEventButton from '../components/EditEventButton'
+import EditableText from '../components/EditableText'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
@@ -694,7 +695,7 @@ export default function EventsPage() {
           <div className="inline-flex items-center gap-2 px-3.5 py-[7px] mb-6 bg-brand-orange/[.07] border border-brand-orange/25">
             <span className="w-1.5 h-1.5 rounded-full bg-brand-orange animate-pulse" />
             <span className="font-condensed font-normal text-[9px] tracking-[.42em] uppercase text-brand-orange">
-              Events &amp; Workshops
+              <EditableText contentId="events.hero.badge">Events &amp; Workshops</EditableText>
             </span>
           </div>
 
@@ -702,15 +703,15 @@ export default function EventsPage() {
           <div className="mb-6">
             <span className="block font-display leading-[.88]"
               style={{ fontSize: 'clamp(3rem,8vw,7rem)', letterSpacing: '.025em', color: 'transparent', WebkitTextStroke: '1px rgba(255,255,255,.28)' }}>
-              WHAT'S
+              <EditableText contentId="events.hero.title-line1">WHAT'S</EditableText>
             </span>
             <span className="block font-display leading-[.88] text-grad-accent"
               style={{ fontSize: 'clamp(3rem,8vw,7rem)', letterSpacing: '.025em', filter: 'drop-shadow(0 0 28px rgba(255,98,48,.24))' }}>
-              HAPPENING
+              <EditableText contentId="events.hero.title-line2">HAPPENING</EditableText>
             </span>
             <span className="block font-condensed font-normal text-brand-cyan tracking-[.2em] uppercase mt-2"
               style={{ fontSize: 'clamp(11px,1.5vw,15px)' }}>
-              Workshops · Summer Camps · School Visits · Competitions
+              <EditableText contentId="events.hero.subtitle">Workshops · Summer Camps · School Visits · Competitions</EditableText>
             </span>
           </div>
 
@@ -725,9 +726,9 @@ export default function EventsPage() {
                 className={`px-7 py-4 text-center ${i > 0 ? 'border-l border-white/[.06]' : ''}`}>
                 <div className="font-display leading-none mb-0.5"
                   style={{ fontSize: '1.8rem', letterSpacing: '.03em', background: 'linear-gradient(90deg,#FF6230,#E0357A)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
-                  {s.num}
+                  <EditableText contentId={`events.stats.${i}.num`}>{s.num}</EditableText>
                 </div>
-                <div className="font-condensed font-normal text-[8px] tracking-[.35em] uppercase text-white/28">{s.label}</div>
+                <div className="font-condensed font-normal text-[8px] tracking-[.35em] uppercase text-white/28"><EditableText contentId={`events.stats.${i}.label`}>{s.label}</EditableText></div>
               </div>
             ))}
           </div>
@@ -747,7 +748,7 @@ export default function EventsPage() {
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-10 h-[1.5px]" style={{ background: 'linear-gradient(to right,#FF6230,#E0357A)' }} />
                 <span className="font-condensed font-normal text-[9px] tracking-[.42em] uppercase text-white/30">
-                  Featured Event
+                  <EditableText contentId="events.featured.label">Featured Event</EditableText>
                 </span>
               </div>
               <FeaturedEvent 
@@ -875,19 +876,19 @@ export default function EventsPage() {
             <div className="relative z-10">
               <span className="font-display block leading-none mb-1.5 text-grad-accent"
                 style={{ fontSize: 'clamp(1.8rem,4vw,3rem)', letterSpacing: '.03em' }}>
-                Bring Us To Your Campus
+                <EditableText contentId="events.cta.title">Bring Us To Your Campus</EditableText>
               </span>
               <span className="font-body text-[13.5px] text-white/38 tracking-[.02em]">
-                We run robotics workshops and live demos at schools and colleges across Bhopal.
+                <EditableText contentId="events.cta.description">We run robotics workshops and live demos at schools and colleges across Bhopal.</EditableText>
               </span>
             </div>
 
             <div className="flex items-center gap-3 shrink-0 flex-wrap relative z-10">
               <button className="font-condensed font-normal text-[9px] tracking-[.4em] uppercase text-white bg-brand-orange border-none px-7 py-3.5 cursor-pointer shadow-[0_0_22px_rgba(255,98,48,.28)] hover:bg-[#ff7a4a] hover:shadow-[0_0_40px_rgba(255,98,48,.55)] hover:-translate-y-px transition-all duration-300">
-                Book a Session →
+                <EditableText contentId="events.cta.primary">Book a Session →</EditableText>
               </button>
               <button className="font-condensed font-normal text-[9px] tracking-[.4em] uppercase text-white/42 bg-white/[.03] border border-white/[.12] px-7 py-3.5 cursor-pointer hover:border-brand-cyan hover:text-brand-cyan hover:bg-brand-cyan/[.04] transition-all duration-300">
-                Download Brochure
+                <EditableText contentId="events.cta.secondary">Download Brochure</EditableText>
               </button>
             </div>
           </div>
