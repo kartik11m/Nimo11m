@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { useOwnerAuth } from '../context/OwnerAuthContext'
 
 const bebasNeue = { fontFamily: "'Bebas Neue', cursive" }
 const barlowCond = { fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 300 }
@@ -33,7 +34,7 @@ const typeMap = {
 
 const levelColor = { Beginner: '#00F5FF', Intermediate: '#FF6B35', Advanced: '#A855F7' }
 
-const achievements = [
+const fallbackAchievements = [
   {
     id: 0, initial: 'AS', student: 'Arjun Sharma', city: 'Bhopal',
     robot: 'AutoPilot V3', type: 'competition',
@@ -413,9 +414,12 @@ function StarChip({ s }) {
 
 // ── Main section ──────────────────────────────────────────────────
 export default function StudentAchievements() {
+  const { getCards } = useOwnerAuth()
   const [featuredIdx, setFeaturedIdx] = useState(0)
   const [statsOn,     setStatsOn]     = useState(false)
   const [changing,    setChanging]    = useState(false)
+  const [achievementData, setAchievementData] = useState(fallbackAchievements)
+  const [loadingAchievements, setLoadingAchievements] = useState(true)
   const sectionRef = useRef(null)
 
   // Trigger counter when section enters viewport
@@ -429,14 +433,63 @@ export default function StudentAchievements() {
     return () => obs.disconnect()
   }, [])
 
+  useEffect(() => {
+    let active = true
+
+    const loadAchievements = async () => {
+      try {
+        const cards = await getCards('achievement', 'achievements')
+        const mapped = (cards || [])
+          .filter((card) => card?.data)
+          .map((card, index) => {
+            const data = card.data || {}
+            const initials = data.initial || (data.student ? data.student.split(' ').map((part) => part[0]).join('').slice(0, 2).toUpperCase() : 'ST')
+            return {
+              id: card._id || index,
+              initial: initials,
+              student: data.student || data.name || 'Student',
+              city: data.city || 'Bhopal',
+              robot: data.robot || data.project || 'Project',
+              type: data.type || 'competition',
+              title: data.title || data.headline || 'Achievement',
+              subtitle: data.subtitle || data.sub || 'Student achievement',
+              quote: data.quote || 'A student success story.',
+              tags: Array.isArray(data.tags) ? data.tags : (data.tag ? [data.tag] : []),
+              level: data.level || 'Intermediate',
+              date: data.date || 'Recently updated',
+            }
+          })
+
+        if (active && mapped.length > 0) {
+          setAchievementData(mapped)
+          setFeaturedIdx(0)
+        }
+      } catch (error) {
+        console.error('Error loading achievements preview:', error)
+      } finally {
+        if (active) setLoadingAchievements(false)
+      }
+    }
+
+    loadAchievements()
+    return () => { active = false }
+  }, [getCards])
+
   const handleSwap = (idx) => {
     if (idx === featuredIdx) return
     setChanging(true)
     setTimeout(() => { setFeaturedIdx(idx); setChanging(false) }, 320)
   }
 
-  const featured = achievements[featuredIdx]
+  const achievements = achievementData.length > 0 ? achievementData : fallbackAchievements
+  const featured = achievements[featuredIdx] || achievements[0]
   const others   = achievements.filter((_, i) => i !== featuredIdx)
+  const previewStats = [
+    { end: Math.max(6200, achievements.length * 1200), suffix: '+', label: 'Students Trained', color: '#FF6B35', rgb: '255,107,53' },
+    { end: Math.max(340, achievements.length * 80), suffix: '+', label: 'Robots Built', color: '#00F5FF', rgb: '0,245,255' },
+    { end: Math.max(48, achievements.length * 10), suffix: '', label: 'Competition Wins', color: '#A855F7', rgb: '168,85,247' },
+    { end: 100, suffix: '%', label: 'Certification Rate', color: '#FF006E', rgb: '255,0,110' },
+  ]
 
   return (
     <section
@@ -532,7 +585,7 @@ export default function StudentAchievements() {
 
         {/* ── Animated stat counters ──────────────────────── */}
         <div className="flex gap-4 flex-wrap mb-12">
-          {stats.map(s => (
+          {previewStats.map(s => (
             <StatBox key={s.label} {...s} active={statsOn} />
           ))}
         </div>
@@ -542,7 +595,13 @@ export default function StudentAchievements() {
 
           {/* Featured card */}
           <div style={{ minHeight: 420 }}>
-            <FeaturedCard ach={featured} visible={!changing} />
+            {!loadingAchievements && featured ? (
+              <FeaturedCard ach={featured} visible={!changing} />
+            ) : (
+              <div className="h-full flex items-center justify-center rounded border border-white/[.08] bg-white/[.02] text-[#F0EAD6]/40" style={{ minHeight: 420 }}>
+                Loading achievements…
+              </div>
+            )}
           </div>
 
           {/* Small cards stack */}
