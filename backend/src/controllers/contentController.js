@@ -22,28 +22,24 @@ exports.getContentByPage = async (req, res) => {
 exports.updateContent = async (req, res) => {
   try {
     const { key } = req.params
-    const { content: newContent } = req.body
+    const { content: newContent, page, label, type } = req.body
 
-    if (!newContent) {
+    if (newContent === undefined) {
       return res.status(400).json({ success: false, message: 'Content is required' })
     }
 
-    // Find by key, not by ID
-    let updated = await Content.findOneAndUpdate(
-      { key },
-      { content: newContent },
-      { new: true }
-    )
-
-    // If content doesn't exist, create it
-    if (!updated) {
-      updated = await Content.create({
-        key,
-        label: key,
-        content: newContent,
-        type: 'text'
-      })
+    const updatePayload = {
+      content: newContent,
+      ...(page ? { page } : {}),
+      ...(label ? { label } : {}),
+      ...(type ? { type } : {}),
     }
+
+    const updated = await Content.findOneAndUpdate(
+      { key },
+      { $set: updatePayload },
+      { new: true, upsert: true, setDefaultsOnInsert: true }
+    )
 
     res.status(200).json({ success: true, content: updated })
   } catch (error) {
