@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
+import { useOwnerAuth } from '../context/OwnerAuthContext'
 
 const bebasNeue = { fontFamily: "'Bebas Neue', sans-serif" }
 const syne      = { fontFamily: "'Syne', sans-serif" }
@@ -24,7 +25,7 @@ const nimoImages = [
 const getImageForPost = (id) => nimoImages[(id - 1) % nimoImages.length]
 
 // ── DATA ──────────────────────────────────────────────────────────
-const posts = [
+const fallbackPosts = [
   {
     id: 1,
     tag: 'Tutorial',
@@ -290,7 +291,50 @@ function MiniCard({ post }) {
 
 // ── MAIN EXPORT ───────────────────────────────────────────────────
 export default function BlogPreview() {
-  const featured  = posts.find((p) => p.featured)
+  const { getCards } = useOwnerAuth()
+  const [posts, setPosts] = useState(fallbackPosts)
+  const [loadingPosts, setLoadingPosts] = useState(true)
+
+  useEffect(() => {
+    let active = true
+
+    const loadPosts = async () => {
+      try {
+        const cards = await getCards('blog', 'explore')
+        const mapped = (cards || [])
+          .filter((card) => card?.data)
+          .map((card, index) => {
+            const data = card.data || {}
+            return {
+              id: card._id || index + 1,
+              tag: data.tag || 'Tutorial',
+              category: data.category || data.cat || 'General',
+              title: data.title || 'Untitled article',
+              excerpt: data.excerpt || data.description || 'A fresh article from the lab.',
+              date: data.date || 'Recently updated',
+              readTime: data.readTime || '5 min',
+              color: data.color || '#FF6B35',
+              rgb: data.rgb || '255,107,53',
+              featured: Boolean(data.featured),
+              img: data.img || data.src || getImageForPost(index + 1),
+            }
+          })
+
+        if (active && mapped.length > 0) {
+          setPosts(mapped)
+        }
+      } catch (error) {
+        console.error('Error loading blog preview:', error)
+      } finally {
+        if (active) setLoadingPosts(false)
+      }
+    }
+
+    loadPosts()
+    return () => { active = false }
+  }, [getCards])
+
+  const featured  = posts.find((p) => p.featured) || posts[0]
   const secondary = posts.filter((p) => !p.featured)
 
   return (
@@ -360,9 +404,15 @@ export default function BlogPreview() {
 
           {/* Mini stack right */}
           <div className="flex flex-col gap-3">
-            {secondary.map((post) => (
-              <MiniCard key={post.id} post={post} />
-            ))}
+            {loadingPosts && posts.length === fallbackPosts.length ? (
+              <div className="rounded border border-white/[.08] bg-white/[.02] px-4 py-4 text-[11px] text-[#F0EAD6]/45">
+                Loading latest posts…
+              </div>
+            ) : (
+              secondary.map((post) => (
+                <MiniCard key={post.id} post={post} />
+              ))
+            )}
 
             {/* Newsletter mini CTA */}
             <div className="relative overflow-hidden p-5 mt-auto"
