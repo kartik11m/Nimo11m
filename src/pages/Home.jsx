@@ -97,19 +97,33 @@ export default function Home() {
 
       <CookieBanner/>
 
-      <StudentAchievements/>
+      <section id="home-achievements">
+        <StudentAchievements/>
+      </section>
 
-      <PartnersStrip/>
+      <section id="home-partners">
+        <PartnersStrip/>
+      </section>
 
-      <LabSetupPreview/>
+      <section id="home-lab-setup">
+        <LabSetupPreview/>
+      </section>
 
-      <Testimonial/>
+      <section id="home-testimonials">
+        <Testimonial/>
+      </section>
 
-      <BlogPreview/>
+      <section id="home-blog">
+        <BlogPreview/>
+      </section>
 
-      <ContactSection/>
+      <section id="home-contact">
+        <ContactSection/>
+      </section>
 
-      <FAQSection/>
+      <section id="home-faq">
+        <FAQSection/>
+      </section>
 
       {/* <ScrollVideoSection /> */}
       
