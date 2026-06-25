@@ -1,5 +1,7 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
+import { useOwnerAuth } from '../context/OwnerAuthContext'
+import CardActions from '../components/CardActions'
 
 const bebasNeue = { fontFamily: "'Bebas Neue', sans-serif" }
 const syne      = { fontFamily: "'Syne', sans-serif" }
@@ -423,7 +425,7 @@ function LevelBadge({ level, color, rgb }) {
 }
 
 // ── Achievement card ───────────────────────────────────────────────
-function AchievementCard({ ach, color, rgb }) {
+function AchievementCard({ ach, color, rgb, isOwner, onEdit, onDelete }) {
   const [hov,      setHov]      = useState(false)
   const [expanded, setExpanded] = useState(false)
   const m = MEDAL[ach.medal]
@@ -441,6 +443,21 @@ function AchievementCard({ ach, color, rgb }) {
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
     >
+      {isOwner && (
+        <div className="absolute top-3 right-3 z-20 flex gap-2">
+          <button
+            onClick={e => { e.stopPropagation(); onEdit?.(ach) }}
+            className="w-7 h-7 rounded-full border border-white/15 bg-[#050508]/80 text-[11px] text-[#F0EAD6]/80 hover:border-[#FF6B35] hover:text-[#FF6B35] transition-all"
+            title="Edit achievement"
+          >✎</button>
+          <button
+            onClick={e => { e.stopPropagation(); onDelete?.(ach) }}
+            className="w-7 h-7 rounded-full border border-white/15 bg-[#050508]/80 text-[11px] text-[#F0EAD6]/80 hover:border-red-400 hover:text-red-400 transition-all"
+            title="Delete achievement"
+          >🗑</button>
+        </div>
+      )}
+
       {/* Medal glow strip */}
       <div className="absolute top-0 left-0 right-0 h-[3px]"
         style={{ background: `linear-gradient(90deg,${m.color},${color},transparent)` }} />
@@ -563,51 +580,81 @@ function AchievementCard({ ach, color, rgb }) {
   )
 }
 
+// ── Photo tile ───────────────────────────────────────────────────
+function PhotoTile({ photo, index, color, rgb, isOwner, onEditPhoto, onDeletePhoto, onOpen }) {
+  const [hov, setHov] = useState(false)
+
+  return (
+    <div
+      className="relative overflow-hidden cursor-pointer aspect-square"
+      style={{
+        border: `1px solid ${hov ? `rgba(${rgb},.5)` : 'rgba(255,255,255,.07)'}`,
+        transform: hov ? 'scale(1.03)' : 'scale(1)',
+        boxShadow: hov ? `0 0 24px rgba(${rgb},.2)` : 'none',
+        transition: 'all .4s cubic-bezier(.23,1,.32,1)',
+      }}
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+      onClick={() => onOpen(index)}
+    >
+      {isOwner && (
+        <div className="absolute top-2 right-2 z-20 flex gap-1">
+          <button
+            onClick={e => { e.stopPropagation(); onEditPhoto?.(photo, index) }}
+            className="w-7 h-7 rounded-full border border-white/15 bg-[#050508]/80 text-[11px] text-[#F0EAD6]/80 hover:border-[#FF6B35] hover:text-[#FF6B35] transition-all"
+            title="Edit photo"
+          >✎</button>
+          <button
+            onClick={e => { e.stopPropagation(); onDeletePhoto?.(index) }}
+            className="w-7 h-7 rounded-full border border-white/15 bg-[#050508]/80 text-[11px] text-[#F0EAD6]/80 hover:border-red-400 hover:text-red-400 transition-all"
+            title="Delete photo"
+          >🗑</button>
+        </div>
+      )}
+      <img src={photo.src} alt={photo.caption}
+        className="w-full h-full object-cover"
+        style={{ transform: hov ? 'scale(1.08)' : 'scale(1)', transition: 'transform .5s ease' }}
+      />
+      <div className="absolute inset-0 pointer-events-none"
+        style={{ background: hov ? 'linear-gradient(to top,rgba(5,5,8,.8) 0%,transparent 60%)' : 'rgba(5,5,8,.25)' }} />
+      <div className="absolute top-0 left-0 right-0 h-[1.5px]"
+        style={{ background: color, transform: hov ? 'scaleX(1)' : 'scaleX(0)', transformOrigin:'left', transition:'transform .35s ease' }} />
+      <div className="absolute bottom-0 left-0 right-0 px-3 py-2 z-10"
+        style={{ opacity: hov ? 1 : 0, transition: 'opacity .3s ease' }}>
+        <div className="text-[7px] font-bold tracking-[.3em] uppercase mb-0.5"
+          style={{ ...syne, color }}>{photo.tag}</div>
+        <div className="text-[10px] font-light text-[#F0EAD6]/75" style={dmSans}>{photo.caption}</div>
+      </div>
+      <div className="absolute inset-0 flex items-center justify-center z-10"
+        style={{ opacity: hov ? 1 : 0, transition: 'opacity .3s ease' }}>
+        <div className="w-8 h-8 flex items-center justify-center"
+          style={{ background: `rgba(${rgb},.18)`, border: `1px solid rgba(${rgb},.5)` }}>
+          <span className="text-xs">⊕</span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Photo strip ────────────────────────────────────────────────────
-function PhotoStrip({ photos, color, rgb }) {
+function PhotoStrip({ photos, color, rgb, isOwner, onEditPhoto, onDeletePhoto }) {
   const [lightbox, setLightbox] = useState(null)
   return (
     <>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {photos.map((photo, i) => {
-          const [hov, setHov] = useState(false)
-          return (
-            <div key={photo.id}
-              className="relative overflow-hidden cursor-pointer aspect-square"
-              style={{
-                border: `1px solid ${hov ? `rgba(${rgb},.5)` : 'rgba(255,255,255,.07)'}`,
-                transform: hov ? 'scale(1.03)' : 'scale(1)',
-                boxShadow: hov ? `0 0 24px rgba(${rgb},.2)` : 'none',
-                transition: 'all .4s cubic-bezier(.23,1,.32,1)',
-              }}
-              onMouseEnter={() => setHov(true)}
-              onMouseLeave={() => setHov(false)}
-              onClick={() => setLightbox(i)}
-            >
-              <img src={photo.src} alt={photo.caption}
-                className="w-full h-full object-cover"
-                style={{ transform: hov ? 'scale(1.08)' : 'scale(1)', transition: 'transform .5s ease' }}
-              />
-              <div className="absolute inset-0 pointer-events-none"
-                style={{ background: hov ? 'linear-gradient(to top,rgba(5,5,8,.8) 0%,transparent 60%)' : 'rgba(5,5,8,.25)' }} />
-              <div className="absolute top-0 left-0 right-0 h-[1.5px]"
-                style={{ background: color, transform: hov ? 'scaleX(1)' : 'scaleX(0)', transformOrigin:'left', transition:'transform .35s ease' }} />
-              <div className="absolute bottom-0 left-0 right-0 px-3 py-2 z-10"
-                style={{ opacity: hov ? 1 : 0, transition: 'opacity .3s ease' }}>
-                <div className="text-[7px] font-bold tracking-[.3em] uppercase mb-0.5"
-                  style={{ ...syne, color }}>{photo.tag}</div>
-                <div className="text-[10px] font-light text-[#F0EAD6]/75" style={dmSans}>{photo.caption}</div>
-              </div>
-              <div className="absolute inset-0 flex items-center justify-center z-10"
-                style={{ opacity: hov ? 1 : 0, transition: 'opacity .3s ease' }}>
-                <div className="w-8 h-8 flex items-center justify-center"
-                  style={{ background: `rgba(${rgb},.18)`, border: `1px solid rgba(${rgb},.5)` }}>
-                  <span className="text-xs">⊕</span>
-                </div>
-              </div>
-            </div>
-          )
-        })}
+        {photos.map((photo, i) => (
+          <PhotoTile
+            key={photo.id || `${photo.src}-${i}`}
+            photo={photo}
+            index={i}
+            color={color}
+            rgb={rgb}
+            isOwner={isOwner}
+            onEditPhoto={onEditPhoto}
+            onDeletePhoto={onDeletePhoto}
+            onOpen={setLightbox}
+          />
+        ))}
       </div>
 
       {/* Lightbox */}
@@ -644,10 +691,118 @@ function PhotoStrip({ photos, color, rgb }) {
 }
 
 // ── Competition section ────────────────────────────────────────────
-function CompetitionSection({ comp }) {
+function CompetitionSection({ comp, isOwner, refreshCompetitions, page }) {
+  const { updateCard } = useOwnerAuth()
+  const sectionId = comp.id || comp._id
+  const [achievementDraft, setAchievementDraft] = useState(null)
+  const [photoDraft, setPhotoDraft] = useState(null)
+
+  const saveCompetitionUpdate = async (updatedData) => {
+    if (!comp._id) return
+    const { _id, ...cardData } = comp
+    await updateCard(comp._id, { ...cardData, ...updatedData })
+    await refreshCompetitions?.()
+  }
+
+  const openAchievementEditor = (achievement = null, index = null) => {
+    setAchievementDraft({
+      index,
+      item: {
+        id: achievement?.id || `ach-${Date.now()}`,
+        year: achievement?.year || new Date().getFullYear(),
+        event: achievement?.event || '',
+        award: achievement?.award || '',
+        medal: achievement?.medal || 'gold',
+        level: achievement?.level || 'National',
+        category: achievement?.category || '',
+        students: achievement?.students || [],
+        project: achievement?.project || '',
+        projectDesc: achievement?.projectDesc || '',
+        img: achievement?.img || '',
+        video: achievement?.video || '',
+        quote: achievement?.quote || '',
+        quoteBy: achievement?.quoteBy || '',
+      },
+    })
+  }
+
+  const saveAchievement = async (e) => {
+    e.preventDefault()
+    const currentAchievements = Array.isArray(comp.achievements) ? [...comp.achievements] : []
+    const nextAchievements = [...currentAchievements]
+    if (achievementDraft.index === null || achievementDraft.index === undefined) {
+      nextAchievements.push(achievementDraft.item)
+    } else {
+      nextAchievements[achievementDraft.index] = achievementDraft.item
+    }
+    await saveCompetitionUpdate({ achievements: nextAchievements })
+    setAchievementDraft(null)
+  }
+
+  const handleAchievementImageSelection = (event) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    const reader = new FileReader()
+    reader.onload = () => {
+      const result = typeof reader.result === 'string' ? reader.result : ''
+      setAchievementDraft(prev => prev ? ({ ...prev, item: { ...prev.item, img: result } }) : prev)
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const deleteAchievement = async (achievement) => {
+    const currentAchievements = Array.isArray(comp.achievements) ? [...comp.achievements] : []
+    const nextAchievements = currentAchievements.filter(item => item.id !== achievement.id)
+    await saveCompetitionUpdate({ achievements: nextAchievements })
+  }
+
+  const openPhotoEditor = (photo = null, index = null) => {
+    setPhotoDraft({
+      index,
+      item: {
+        id: photo?.id || `photo-${Date.now()}`,
+        src: photo?.src || '',
+        caption: photo?.caption || '',
+        tag: photo?.tag || '',
+      },
+    })
+  }
+
+  const savePhoto = async (e) => {
+    e.preventDefault()
+    const currentPhotos = Array.isArray(comp.photos) ? [...comp.photos] : []
+    const nextPhotos = [...currentPhotos]
+    if (photoDraft.index === null || photoDraft.index === undefined) {
+      nextPhotos.push(photoDraft.item)
+    } else {
+      nextPhotos[photoDraft.index] = photoDraft.item
+    }
+    await saveCompetitionUpdate({ photos: nextPhotos })
+    setPhotoDraft(null)
+  }
+
+  const handlePhotoFileSelection = (event) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    const reader = new FileReader()
+    reader.onload = () => {
+      const result = typeof reader.result === 'string' ? reader.result : ''
+      setPhotoDraft(prev => prev ? ({ ...prev, item: { ...prev.item, src: result } }) : prev)
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const deletePhoto = async (index) => {
+    const currentPhotos = Array.isArray(comp.photos) ? [...comp.photos] : []
+    const nextPhotos = currentPhotos.filter((_, i) => i !== index)
+    await saveCompetitionUpdate({ photos: nextPhotos })
+  }
+
   return (
     <section
-      id={comp.id}
+      id={sectionId}
       className="relative overflow-hidden border-b border-white/[.055]"
       style={{ borderTop: `2px solid rgba(${comp.rgb},.3)` }}
     >
@@ -663,6 +818,19 @@ function CompetitionSection({ comp }) {
       }} />
 
       <div className="relative z-[2] max-w-[1100px] mx-auto px-12 py-20">
+        {isOwner && comp._id && (
+          <div className="absolute top-6 right-6 z-20">
+            <CardActions
+              cardType="competition"
+              cardId={comp._id}
+              cardData={comp}
+              showEditDelete={true}
+              page={page}
+              onCardAdded={refreshCompetitions}
+              onCardDeleted={refreshCompetitions}
+            />
+          </div>
+        )}
 
         {/* ── Section header ── */}
         <div className="flex items-start justify-between gap-10 flex-wrap mb-14">
@@ -756,30 +924,136 @@ function CompetitionSection({ comp }) {
 
         {/* ── Achievement cards ── */}
         <div className="mb-14">
-          <div className="flex items-center gap-3 mb-6">
-            <span className="w-1.5 h-1.5 rounded-full" style={{ background: comp.color, boxShadow: `0 0 8px rgba(${comp.rgb},.7)` }} />
-            <span className="text-[8px] font-bold tracking-[.42em] uppercase"
-              style={{ ...syne, color: comp.color }}>Achievements</span>
+          <div className="flex items-center justify-between gap-3 mb-6">
+            <div className="flex items-center gap-3">
+              <span className="w-1.5 h-1.5 rounded-full" style={{ background: comp.color, boxShadow: `0 0 8px rgba(${comp.rgb},.7)` }} />
+              <span className="text-[8px] font-bold tracking-[.42em] uppercase"
+                style={{ ...syne, color: comp.color }}>Achievements</span>
+            </div>
+            {isOwner && (
+              <button
+                onClick={() => openAchievementEditor()}
+                className="px-3 py-1.5 text-[8px] font-bold tracking-[.3em] uppercase border border-white/10 bg-white/[.03] text-[#F0EAD6]/70 hover:border-[#FF6B35] hover:text-[#FF6B35] transition-all"
+              >+ Add</button>
+            )}
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {comp.achievements.map(ach => (
-              <AchievementCard key={ach.id} ach={ach} color={comp.color} rgb={comp.rgb} />
+            {(comp.achievements || []).map(ach => (
+              <AchievementCard key={ach.id} ach={ach} color={comp.color} rgb={comp.rgb} isOwner={isOwner} onEdit={achievement => openAchievementEditor(achievement, (comp.achievements || []).findIndex(item => item.id === achievement.id))} onDelete={deleteAchievement} />
             ))}
           </div>
         </div>
 
         {/* ── Photo gallery ── */}
         <div>
-          <div className="flex items-center gap-3 mb-6">
-            <span className="w-1.5 h-1.5 rounded-full" style={{ background: comp.color, boxShadow: `0 0 8px rgba(${comp.rgb},.7)` }} />
-            <span className="text-[8px] font-bold tracking-[.42em] uppercase"
-              style={{ ...syne, color: comp.color }}>Photo Gallery</span>
-            <span className="text-[9px] font-light text-[#F0EAD6]/25 ml-1" style={dmSans}>
-              Click to expand
-            </span>
+          <div className="flex items-center justify-between gap-3 mb-6">
+            <div className="flex items-center gap-3">
+              <span className="w-1.5 h-1.5 rounded-full" style={{ background: comp.color, boxShadow: `0 0 8px rgba(${comp.rgb},.7)` }} />
+              <span className="text-[8px] font-bold tracking-[.42em] uppercase"
+                style={{ ...syne, color: comp.color }}>Photo Gallery</span>
+              <span className="text-[9px] font-light text-[#F0EAD6]/25 ml-1" style={dmSans}>
+                Click to expand
+              </span>
+            </div>
+            {isOwner && (
+              <button
+                onClick={() => openPhotoEditor()}
+                className="px-3 py-1.5 text-[8px] font-bold tracking-[.3em] uppercase border border-white/10 bg-white/[.03] text-[#F0EAD6]/70 hover:border-[#FF6B35] hover:text-[#FF6B35] transition-all"
+              >+ Add</button>
+            )}
           </div>
-          <PhotoStrip photos={comp.photos} color={comp.color} rgb={comp.rgb} />
+          <PhotoStrip photos={comp.photos || []} color={comp.color} rgb={comp.rgb} isOwner={isOwner} onEditPhoto={photo => openPhotoEditor(photo, (comp.photos || []).findIndex(item => item.id === photo.id))} onDeletePhoto={deletePhoto} />
         </div>
+
+        {achievementDraft && (
+          <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/70 p-4">
+            <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-xl border border-white/10 bg-[#0a0a0d] p-6">
+              <div className="mb-4 flex items-center justify-between">
+                <h3 className="text-xl font-bold text-white">{achievementDraft.index === null || achievementDraft.index === undefined ? 'Add Achievement' : 'Edit Achievement'}</h3>
+                <button onClick={() => setAchievementDraft(null)} className="text-sm text-[#F0EAD6]/50 hover:text-white">✕</button>
+              </div>
+              <form onSubmit={saveAchievement} className="space-y-3">
+                <div className="grid gap-3 md:grid-cols-2">
+                  <input className="rounded border border-white/10 bg-white/10 px-3 py-2 text-sm text-white" value={achievementDraft.item.year || ''} onChange={e => setAchievementDraft(prev => ({ ...prev, item: { ...prev.item, year: e.target.value } }))} placeholder="Year" />
+                  <input className="rounded border border-white/10 bg-white/10 px-3 py-2 text-sm text-white" value={achievementDraft.item.event || ''} onChange={e => setAchievementDraft(prev => ({ ...prev, item: { ...prev.item, event: e.target.value } }))} placeholder="Event" />
+                  <input className="rounded border border-white/10 bg-white/10 px-3 py-2 text-sm text-white" value={achievementDraft.item.award || ''} onChange={e => setAchievementDraft(prev => ({ ...prev, item: { ...prev.item, award: e.target.value } }))} placeholder="Award" />
+                  <select className="rounded border border-white/10 bg-white/10 px-3 py-2 text-sm text-white" value={achievementDraft.item.medal || 'gold'} onChange={e => setAchievementDraft(prev => ({ ...prev, item: { ...prev.item, medal: e.target.value } }))}>
+                    <option value="gold">Gold</option>
+                    <option value="silver">Silver</option>
+                    <option value="bronze">Bronze</option>
+                  </select>
+                  <input className="rounded border border-white/10 bg-white/10 px-3 py-2 text-sm text-white" value={achievementDraft.item.level || ''} onChange={e => setAchievementDraft(prev => ({ ...prev, item: { ...prev.item, level: e.target.value } }))} placeholder="Level" />
+                  <input className="rounded border border-white/10 bg-white/10 px-3 py-2 text-sm text-white" value={achievementDraft.item.category || ''} onChange={e => setAchievementDraft(prev => ({ ...prev, item: { ...prev.item, category: e.target.value } }))} placeholder="Category" />
+                  <input className="rounded border border-white/10 bg-white/10 px-3 py-2 text-sm text-white" value={achievementDraft.item.project || ''} onChange={e => setAchievementDraft(prev => ({ ...prev, item: { ...prev.item, project: e.target.value } }))} placeholder="Project" />
+                  <input className="rounded border border-white/10 bg-white/10 px-3 py-2 text-sm text-white" value={achievementDraft.item.img || ''} onChange={e => setAchievementDraft(prev => ({ ...prev, item: { ...prev.item, img: e.target.value } }))} placeholder="Image URL" />
+                  <input className="rounded border border-white/10 bg-white/10 px-3 py-2 text-sm text-white" value={achievementDraft.item.video || ''} onChange={e => setAchievementDraft(prev => ({ ...prev, item: { ...prev.item, video: e.target.value } }))} placeholder="Video URL" />
+                  <input className="rounded border border-white/10 bg-white/10 px-3 py-2 text-sm text-white" value={achievementDraft.item.quoteBy || ''} onChange={e => setAchievementDraft(prev => ({ ...prev, item: { ...prev.item, quoteBy: e.target.value } }))} placeholder="Quote By" />
+                </div>
+                {achievementDraft.item.img && (
+                  <div className="overflow-hidden rounded border border-white/10 bg-white/5">
+                    <img src={achievementDraft.item.img} alt="Achievement preview" className="max-h-48 w-full object-cover" />
+                  </div>
+                )}
+                <div className="rounded border border-white/10 bg-white/5 p-3">
+                  <label className="mb-2 block text-sm font-semibold text-white">Upload achievement image</label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleAchievementImageSelection}
+                    className="w-full text-sm text-[#F0EAD6]/70 file:mr-3 file:rounded file:border-0 file:bg-[#FF6B35] file:px-3 file:py-2 file:text-sm file:font-semibold file:text-white"
+                  />
+                  <p className="mt-2 text-[11px] text-[#F0EAD6]/45">You can also paste an image URL below if you prefer.</p>
+                </div>
+                <input className="w-full rounded border border-white/10 bg-white/10 px-3 py-2 text-sm text-white" value={achievementDraft.item.img || ''} onChange={e => setAchievementDraft(prev => ({ ...prev, item: { ...prev.item, img: e.target.value } }))} placeholder="Or paste image URL" />
+                <textarea className="min-h-24 w-full rounded border border-white/10 bg-white/10 px-3 py-2 text-sm text-white" value={achievementDraft.item.projectDesc || ''} onChange={e => setAchievementDraft(prev => ({ ...prev, item: { ...prev.item, projectDesc: e.target.value } }))} placeholder="Project description" />
+                <textarea className="min-h-20 w-full rounded border border-white/10 bg-white/10 px-3 py-2 text-sm text-white" value={achievementDraft.item.quote || ''} onChange={e => setAchievementDraft(prev => ({ ...prev, item: { ...prev.item, quote: e.target.value } }))} placeholder="Quote" />
+                <textarea className="min-h-24 w-full rounded border border-white/10 bg-white/10 px-3 py-2 text-sm text-white" value={JSON.stringify(achievementDraft.item.students || [], null, 2)} onChange={e => {
+                  try { const parsed = JSON.parse(e.target.value); setAchievementDraft(prev => ({ ...prev, item: { ...prev.item, students: parsed } })) }
+                  catch { setAchievementDraft(prev => ({ ...prev, item: { ...prev.item, students: [] } })) }
+                }} placeholder='Students JSON array, e.g. [{"name":"A","age":16,"city":"Bhopal"}]' />
+                <div className="flex justify-end gap-2 pt-2">
+                  <button type="button" onClick={() => setAchievementDraft(null)} className="rounded border border-white/10 px-4 py-2 text-sm text-[#F0EAD6]/70">Cancel</button>
+                  <button type="submit" className="rounded bg-[#FF6B35] px-4 py-2 text-sm font-semibold text-white">Save</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {photoDraft && (
+          <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/70 p-4">
+            <div className="w-full max-w-lg rounded-xl border border-white/10 bg-[#0a0a0d] p-6">
+              <div className="mb-4 flex items-center justify-between">
+                <h3 className="text-xl font-bold text-white">{photoDraft.index === null || photoDraft.index === undefined ? 'Add Photo' : 'Edit Photo'}</h3>
+                <button onClick={() => setPhotoDraft(null)} className="text-sm text-[#F0EAD6]/50 hover:text-white">✕</button>
+              </div>
+              <form onSubmit={savePhoto} className="space-y-3">
+                {photoDraft.item.src && (
+                  <div className="overflow-hidden rounded border border-white/10 bg-white/5">
+                    <img src={photoDraft.item.src} alt="Preview" className="max-h-48 w-full object-cover" />
+                  </div>
+                )}
+                <div className="rounded border border-white/10 bg-white/5 p-3">
+                  <label className="mb-2 block text-sm font-semibold text-white">Upload from your computer</label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handlePhotoFileSelection}
+                    className="w-full text-sm text-[#F0EAD6]/70 file:mr-3 file:rounded file:border-0 file:bg-[#FF6B35] file:px-3 file:py-2 file:text-sm file:font-semibold file:text-white"
+                  />
+                  <p className="mt-2 text-[11px] text-[#F0EAD6]/45">You can also paste an image URL below if you prefer.</p>
+                </div>
+                <input className="w-full rounded border border-white/10 bg-white/10 px-3 py-2 text-sm text-white" value={photoDraft.item.src || ''} onChange={e => setPhotoDraft(prev => ({ ...prev, item: { ...prev.item, src: e.target.value } }))} placeholder="Or paste image URL" />
+                <input className="w-full rounded border border-white/10 bg-white/10 px-3 py-2 text-sm text-white" value={photoDraft.item.caption || ''} onChange={e => setPhotoDraft(prev => ({ ...prev, item: { ...prev.item, caption: e.target.value } }))} placeholder="Caption" />
+                <input className="w-full rounded border border-white/10 bg-white/10 px-3 py-2 text-sm text-white" value={photoDraft.item.tag || ''} onChange={e => setPhotoDraft(prev => ({ ...prev, item: { ...prev.item, tag: e.target.value } }))} placeholder="Tag" />
+                <div className="flex justify-end gap-2 pt-2">
+                  <button type="button" onClick={() => setPhotoDraft(null)} className="rounded border border-white/10 px-4 py-2 text-sm text-[#F0EAD6]/70">Cancel</button>
+                  <button type="submit" className="rounded bg-[#FF6B35] px-4 py-2 text-sm font-semibold text-white">Save</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
 
       </div>
     </section>
@@ -787,9 +1061,9 @@ function CompetitionSection({ comp }) {
 }
 
 // ── Hall of Fame card ──────────────────────────────────────────────
-function HallCard({ student }) {
+function HallCard({ student, isOwner, onEdit, onDelete }) {
   const [hov, setHov] = useState(false)
-  const topWin = student.wins[0]
+  const topWin = student.wins?.[0] || { color: '#FF6B35', rgb: '255,107,53' }
   return (
     <div
       className="relative overflow-hidden p-6 cursor-default"
@@ -803,13 +1077,27 @@ function HallCard({ student }) {
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
     >
+      {isOwner && (
+        <div className="absolute right-3 top-3 z-20 flex gap-2">
+          <button
+            onClick={() => onEdit?.(student)}
+            className="w-7 h-7 rounded-full border border-white/15 bg-[#050508]/80 text-[11px] text-[#F0EAD6]/80 hover:border-[#FF6B35] hover:text-[#FF6B35] transition-all"
+            title="Edit hall of fame entry"
+          >✎</button>
+          <button
+            onClick={() => onDelete?.(student)}
+            className="w-7 h-7 rounded-full border border-white/15 bg-[#050508]/80 text-[11px] text-[#F0EAD6]/80 hover:border-red-400 hover:text-red-400 transition-all"
+            title="Delete hall of fame entry"
+          >🗑</button>
+        </div>
+      )}
       <div className="absolute top-0 left-0 right-0 h-[2px]"
         style={{ background: topWin.color, transform: hov ? 'scaleX(1)' : 'scaleX(0)', transformOrigin:'left', transition:'transform .4s ease' }} />
 
       {/* Avatar */}
       <div className="w-12 h-12 flex items-center justify-center mb-4 text-xl font-bold"
         style={{ background: `rgba(${topWin.rgb},.12)`, border: `1px solid rgba(${topWin.rgb},.28)`, ...bebasNeue, color: topWin.color }}>
-        {student.name.charAt(0)}
+        {student.name?.charAt(0) || 'S'}
       </div>
 
       <div className="text-[15px] font-bold text-[#F0EAD6]/90 mb-0.5" style={syne}>{student.name}</div>
@@ -819,7 +1107,7 @@ function HallCard({ student }) {
 
       {/* Win list */}
       <div className="space-y-2">
-        {student.wins.map((win, i) => (
+        {(student.wins || []).map((win, i) => (
           <div key={i} className="flex items-center gap-2">
             <span style={{ fontSize: 12 }}>{MEDAL[win.medal]?.icon || '🏅'}</span>
             <div>
@@ -834,7 +1122,7 @@ function HallCard({ student }) {
 
       <div className="mt-4 pt-3 border-t border-white/[.06] flex items-center gap-2">
         <span className="leading-none" style={{ ...bebasNeue, fontSize:'1.4rem', color: topWin.color }}>
-          {student.wins.length}
+          {(student.wins || []).length}
         </span>
         <span className="text-[7px] font-bold tracking-[.32em] uppercase text-[#F0EAD6]/25" style={syne}>
           Career Wins
@@ -845,17 +1133,18 @@ function HallCard({ student }) {
 }
 
 // ── Sticky competition nav ─────────────────────────────────────────
-function StickyNav({ active }) {
+function StickyNav({ active, sections }) {
   return (
     <div
       className="hidden xl:flex fixed left-6 top-1/2 -translate-y-1/2 flex-col gap-3 z-[100]"
     >
-      {competitions.map(c => {
-        const isActive = active === c.id
+      {sections.map(c => {
+        const sectionId = c.id || c._id
+        const isActive = active === sectionId
         return (
           <a
-            key={c.id}
-            href={`#${c.id}`}
+            key={sectionId}
+            href={`#${sectionId}`}
             className="flex items-center gap-2 no-underline group"
             style={{ textDecoration:'none' }}
           >
@@ -895,30 +1184,182 @@ function StickyNav({ active }) {
 
 // ── MAIN PAGE ─────────────────────────────────────────────────────
 export default function CompetitionsPage() {
+  const { getCards, addCard, isOwner, getPageContent, savePageContent } = useOwnerAuth()
+  const [competitionsData, setCompetitionsData] = useState(competitions)
   const [activeSection, setActiveSection] = useState(competitions[0].id)
+  const [hallOfFameEntries, setHallOfFameEntries] = useState([])
+  const [hallDraft, setHallDraft] = useState(null)
+
+  const seedCompetitionCards = useCallback(async () => {
+    if (!isOwner) return false
+    try {
+      const existingCards = await getCards('competition', 'explore')
+      if (Array.isArray(existingCards) && existingCards.length > 0) return true
+
+      for (const comp of competitions) {
+        await addCard('competition', { ...comp, years: comp.years, achievements: comp.achievements, photos: comp.photos }, 'explore')
+      }
+      return true
+    } catch (err) {
+      console.error('Failed to seed competition cards:', err)
+      return false
+    }
+  }, [addCard, getCards, isOwner])
+
+  const loadCompetitionCards = useCallback(async () => {
+    try {
+      const cards = await getCards('competition', 'explore')
+      if (Array.isArray(cards) && cards.length > 0) {
+        const normalized = cards
+          .map(card => ({ _id: card._id, index: card.index, ...card.data }))
+          .sort((a, b) => (a.index ?? 0) - (b.index ?? 0))
+        setCompetitionsData(normalized)
+        const firstSectionId = normalized[0]?.id || normalized[0]?._id || competitions[0].id
+        if (!normalized.some(c => (c.id || c._id) === activeSection)) {
+          setActiveSection(firstSectionId)
+        }
+        return
+      }
+
+      if (isOwner) {
+        const seeded = await seedCompetitionCards()
+        if (seeded) {
+          const refreshedCards = await getCards('competition', 'explore')
+          if (Array.isArray(refreshedCards) && refreshedCards.length > 0) {
+            const normalized = refreshedCards
+              .map(card => ({ _id: card._id, index: card.index, ...card.data }))
+              .sort((a, b) => (a.index ?? 0) - (b.index ?? 0))
+            setCompetitionsData(normalized)
+            return
+          }
+        }
+      }
+
+      setCompetitionsData(competitions)
+    } catch (err) {
+      console.error('Failed to load competition cards:', err)
+      setCompetitionsData(competitions)
+    }
+  }, [activeSection, getCards, isOwner, seedCompetitionCards])
+
+  useEffect(() => {
+    loadCompetitionCards()
+  }, [loadCompetitionCards])
 
   // IntersectionObserver to track active section
   useEffect(() => {
-    const observers = competitions.map(comp => {
-      const el = document.getElementById(comp.id)
+    const observers = competitionsData.map(comp => {
+      const sectionId = comp.id || comp._id
+      const el = document.getElementById(sectionId)
       if (!el) return null
       const obs = new IntersectionObserver(
-        ([entry]) => { if (entry.isIntersecting) setActiveSection(comp.id) },
+        ([entry]) => { if (entry.isIntersecting) setActiveSection(sectionId) },
         { threshold: 0.3 }
       )
       obs.observe(el)
       return obs
     })
     return () => observers.forEach(o => o?.disconnect())
+  }, [competitionsData])
+
+  const totalStats = {
+    gold: competitionsData.flatMap(c => c.achievements || []).filter(a => a.medal === 'gold').length,
+    silver: competitionsData.flatMap(c => c.achievements || []).filter(a => a.medal === 'silver').length,
+    bronze: competitionsData.flatMap(c => c.achievements || []).filter(a => a.medal === 'bronze').length,
+    national: competitionsData.reduce((s, c) => s + (c.stats?.national || 0), 0),
+    international: competitionsData.reduce((s, c) => s + (c.stats?.international || 0), 0),
+    totalAwards: competitionsData.reduce((s, c) => s + (c.stats?.awards || 0), 0),
+  }
+
+  const allStudents = competitionsData.flatMap(c =>
+    (c.achievements || []).flatMap(a =>
+      (a.students || []).map(s => ({ ...s, competition: c.name, compColor: c.color, compRgb: c.rgb, project: a.project, award: a.award, medal: a.medal, year: a.year }))
+    )
+  )
+  const studentMap = {}
+  allStudents.forEach(s => {
+    if (!studentMap[s.name]) studentMap[s.name] = { ...s, wins: [] }
+    studentMap[s.name].wins.push({ competition: s.competition, award: s.award, medal: s.medal, year: s.year, color: s.compColor, rgb: s.compRgb })
+  })
+  const hallOfFame = hallOfFameEntries.length > 0
+    ? hallOfFameEntries
+    : Object.values(studentMap)
+        .filter(s => s.wins.length >= 2)
+        .sort((a, b) => b.wins.length - a.wins.length)
+        .slice(0, 6)
+
+  useEffect(() => {
+    let active = true
+    const loadHallOfFame = async () => {
+      try {
+        const entries = await getPageContent('explore')
+        const savedEntry = entries.find(entry => entry.key === 'explore-hall-of-fame')
+        if (!savedEntry || !active) return
+
+        const parsed = typeof savedEntry.content === 'string' ? JSON.parse(savedEntry.content) : savedEntry.content
+        if (Array.isArray(parsed)) {
+          setHallOfFameEntries(parsed)
+        }
+      } catch (error) {
+        console.error('Failed to load hall of fame entries', error)
+      }
+    }
+
+    loadHallOfFame()
+    return () => { active = false }
   }, [])
 
-  const activeComp = competitions.find(c => c.id === activeSection)
+  useEffect(() => {
+    if (hallOfFameEntries.length > 0 || !competitionsData.length) return
+    const derived = Object.values(studentMap)
+      .filter(s => s.wins.length >= 2)
+      .sort((a, b) => b.wins.length - a.wins.length)
+      .slice(0, 6)
+    setHallOfFameEntries(derived)
+  }, [competitionsData, hallOfFameEntries.length, studentMap])
+
+  const activeComp = competitionsData.find(c => (c.id || c._id) === activeSection)
+
+  const openHallEditor = (student = null, index = null) => {
+    setHallDraft({
+      index,
+      item: {
+        name: student?.name || '',
+        city: student?.city || '',
+        age: student?.age || '',
+        wins: student?.wins || [],
+      },
+    })
+  }
+
+  const saveHallEntry = async (e) => {
+    e.preventDefault()
+    const nextEntries = [...hallOfFameEntries]
+    if (hallDraft.index === null || hallDraft.index === undefined) {
+      nextEntries.push(hallDraft.item)
+    } else {
+      nextEntries[hallDraft.index] = hallDraft.item
+    }
+    setHallOfFameEntries(nextEntries)
+    if (isOwner) {
+      await savePageContent('explore', 'explore-hall-of-fame', nextEntries, 'Hall of fame entries')
+    }
+    setHallDraft(null)
+  }
+
+  const deleteHallEntry = async (student) => {
+    const nextEntries = hallOfFameEntries.filter(item => item.name !== student.name || item.city !== student.city)
+    setHallOfFameEntries(nextEntries)
+    if (isOwner) {
+      await savePageContent('explore', 'explore-hall-of-fame', nextEntries, 'Hall of fame entries')
+    }
+  }
 
   return (
     <main className="bg-[#050508] text-[#F0EAD6] overflow-x-hidden" style={dmSans}>
 
       {/* Sticky nav */}
-      <StickyNav active={activeSection} />
+      <StickyNav active={activeSection} sections={competitionsData} />
 
       {/* ══ HERO ════════════════════════════════════════════════ */}
       <section className="relative overflow-hidden px-12 pt-[140px] pb-20 border-b border-white/[.055]">
@@ -971,23 +1412,36 @@ export default function CompetitionsPage() {
 
               {/* Competition quick-nav */}
               <div className="flex flex-wrap gap-2 mt-8">
-                {competitions.map(c => (
-                  <a key={c.id} href={`#${c.id}`}
-                    className="inline-flex items-center gap-2 px-3.5 py-2 border no-underline transition-all duration-200"
-                    style={{
-                      background:  `rgba(${c.rgb},.07)`,
-                      borderColor: `rgba(${c.rgb},.28)`,
-                      ...syne, fontSize:'9px', fontWeight:700, letterSpacing:'.3em',
-                      textTransform:'uppercase', color: c.color,
-                    }}
-                    onMouseEnter={e => { e.currentTarget.style.background=`rgba(${c.rgb},.15)`; e.currentTarget.style.transform='translateY(-2px)' }}
-                    onMouseLeave={e => { e.currentTarget.style.background=`rgba(${c.rgb},.07)`; e.currentTarget.style.transform='none' }}
-                  >
-                    <span>{c.icon}</span>{c.shortName}
-                  </a>
-                ))}
+                {competitionsData.map(c => {
+                  const sectionId = c.id || c._id
+                  return (
+                    <a key={sectionId} href={`#${sectionId}`}
+                      className="inline-flex items-center gap-2 px-3.5 py-2 border no-underline transition-all duration-200"
+                      style={{
+                        background:  `rgba(${c.rgb},.07)`,
+                        borderColor: `rgba(${c.rgb},.28)`,
+                        ...syne, fontSize:'9px', fontWeight:700, letterSpacing:'.3em',
+                        textTransform:'uppercase', color: c.color,
+                      }}
+                      onMouseEnter={e => { e.currentTarget.style.background=`rgba(${c.rgb},.15)`; e.currentTarget.style.transform='translateY(-2px)' }}
+                      onMouseLeave={e => { e.currentTarget.style.background=`rgba(${c.rgb},.07)`; e.currentTarget.style.transform='none' }}
+                    >
+                      <span>{c.icon}</span>{c.shortName}
+                    </a>
+                  )
+                })}
               </div>
             </div>
+            {isOwner && (
+              <div className="mt-8">
+                <CardActions
+                  cardType="competition"
+                  showAddButton={true}
+                  page="explore"
+                  onCardAdded={loadCompetitionCards}
+                />
+              </div>
+            )}
 
             {/* Medal tally card */}
             <div className="relative bg-white/[.03] border border-white/[.07] p-8 flex-shrink-0">
@@ -1037,8 +1491,14 @@ export default function CompetitionsPage() {
       </section>
 
       {/* ══ COMPETITION SECTIONS ══════════════════════════════════ */}
-      {competitions.map(comp => (
-        <CompetitionSection key={comp.id} comp={comp} />
+      {competitionsData.map(comp => (
+        <CompetitionSection
+          key={comp._id || comp.id}
+          comp={comp}
+          isOwner={isOwner}
+          refreshCompetitions={loadCompetitionCards}
+          page="explore"
+        />
       ))}
 
       {/* ══ HALL OF FAME ══════════════════════════════════════════ */}
@@ -1052,30 +1512,72 @@ export default function CompetitionsPage() {
           }} />
 
           <div className="relative z-[2] max-w-[1100px] mx-auto">
-            <div className="mb-12">
-              <div className="inline-flex items-center gap-2 px-3.5 py-[7px] bg-[#FF6B35]/[.07] border border-[#FF6B35]/[.22] mb-5">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#FF6B35] animate-pulse" />
-                <span className="text-[9px] font-bold tracking-[.42em] uppercase text-[#FF6B35]" style={syne}>
-                  Multi-Competition Champions
-                </span>
+            <div className="mb-12 flex items-end justify-between gap-4">
+              <div>
+                <div className="inline-flex items-center gap-2 px-3.5 py-[7px] bg-[#FF6B35]/[.07] border border-[#FF6B35]/[.22] mb-5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#FF6B35] animate-pulse" />
+                  <span className="text-[9px] font-bold tracking-[.42em] uppercase text-[#FF6B35]" style={syne}>
+                    Multi-Competition Champions
+                  </span>
+                </div>
+                <span className="block leading-[.9]" style={{
+                  ...bebasNeue, fontSize:'clamp(36px,5.5vw,60px)',
+                  WebkitTextStroke:'1px rgba(240,234,214,.35)', color:'transparent',
+                }}>HALL OF</span>
+                <span className="block leading-[.9] text-[#FF6B35]" style={{
+                  ...bebasNeue, fontSize:'clamp(36px,5.5vw,60px)',
+                  textShadow:'0 0 30px rgba(255,107,53,.35)',
+                }}>FAME</span>
+                <div className="w-14 h-px mt-5" style={{ background:'linear-gradient(90deg,#FF6B35,transparent)' }} />
               </div>
-              <span className="block leading-[.9]" style={{
-                ...bebasNeue, fontSize:'clamp(36px,5.5vw,60px)',
-                WebkitTextStroke:'1px rgba(240,234,214,.35)', color:'transparent',
-              }}>HALL OF</span>
-              <span className="block leading-[.9] text-[#FF6B35]" style={{
-                ...bebasNeue, fontSize:'clamp(36px,5.5vw,60px)',
-                textShadow:'0 0 30px rgba(255,107,53,.35)',
-              }}>FAME</span>
-              <div className="w-14 h-px mt-5" style={{ background:'linear-gradient(90deg,#FF6B35,transparent)' }} />
+              {isOwner && (
+                <button
+                  onClick={() => openHallEditor()}
+                  className="px-3 py-1.5 text-[8px] font-bold tracking-[.3em] uppercase border border-white/10 bg-white/[.03] text-[#F0EAD6]/70 hover:border-[#FF6B35] hover:text-[#FF6B35] transition-all"
+                >+ Add</button>
+              )}
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-              {hallOfFame.map(student => (
-                <HallCard key={student.name} student={student} />
+              {hallOfFame.map((student, index) => (
+                <HallCard
+                  key={`${student.name}-${index}`}
+                  student={student}
+                  isOwner={isOwner}
+                  onEdit={entry => openHallEditor(entry, index)}
+                  onDelete={deleteHallEntry}
+                />
               ))}
             </div>
           </div>
         </section>
+      )}
+
+      {hallDraft && (
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/70 p-4">
+          <div className="w-full max-w-lg rounded-xl border border-white/10 bg-[#0a0a0d] p-6">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-xl font-bold text-white">{hallDraft.index === null || hallDraft.index === undefined ? 'Add Hall of Fame Entry' : 'Edit Hall of Fame Entry'}</h3>
+              <button onClick={() => setHallDraft(null)} className="text-sm text-[#F0EAD6]/50 hover:text-white">✕</button>
+            </div>
+            <form onSubmit={saveHallEntry} className="space-y-3">
+              <input className="w-full rounded border border-white/10 bg-white/10 px-3 py-2 text-sm text-white" value={hallDraft.item.name || ''} onChange={e => setHallDraft(prev => ({ ...prev, item: { ...prev.item, name: e.target.value } }))} placeholder="Student name" />
+              <input className="w-full rounded border border-white/10 bg-white/10 px-3 py-2 text-sm text-white" value={hallDraft.item.city || ''} onChange={e => setHallDraft(prev => ({ ...prev, item: { ...prev.item, city: e.target.value } }))} placeholder="City" />
+              <input className="w-full rounded border border-white/10 bg-white/10 px-3 py-2 text-sm text-white" value={hallDraft.item.age || ''} onChange={e => setHallDraft(prev => ({ ...prev, item: { ...prev.item, age: e.target.value } }))} placeholder="Age" />
+              <textarea className="min-h-24 w-full rounded border border-white/10 bg-white/10 px-3 py-2 text-sm text-white" value={JSON.stringify(hallDraft.item.wins || [], null, 2)} onChange={e => {
+                try {
+                  const parsed = JSON.parse(e.target.value)
+                  setHallDraft(prev => ({ ...prev, item: { ...prev.item, wins: parsed } }))
+                } catch {
+                  setHallDraft(prev => ({ ...prev, item: { ...prev.item, wins: [] } }))
+                }
+              }} placeholder='Wins JSON array, e.g. [{"competition":"WRO","award":"First Place","medal":"gold","year":2024}]' />
+              <div className="flex justify-end gap-2 pt-2">
+                <button type="button" onClick={() => setHallDraft(null)} className="rounded border border-white/10 px-4 py-2 text-sm text-[#F0EAD6]/70">Cancel</button>
+                <button type="submit" className="rounded bg-[#FF6B35] px-4 py-2 text-sm font-semibold text-white">Save</button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
 
       {/* ══ CLOSING CTA ═══════════════════════════════════════════ */}
