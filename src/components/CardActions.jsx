@@ -83,6 +83,19 @@ const cardTemplates = {
     suited: "Target audience",
     highlight: false
   },
+  competition: {
+    name: "New Competition",
+    shortName: "COMP",
+    icon: "🏆",
+    color: "#FF6B35",
+    rgb: "255,107,53",
+    tagline: "Competition tagline",
+    description: "Competition description goes here.",
+    years: ["2025"],
+    stats: { entries: 0, awards: 0, national: 0, international: 0 },
+    achievements: [],
+    photos: []
+  },
   whyus: {
     icon: "⭐",
     title: "Why Us",
@@ -111,7 +124,7 @@ const cardTemplates = {
   }
 }
 
-export default function CardActions({ cardType, cardId, cardData, onCardAdded, onCardDeleted, showAddButton = false, showEditDelete = false }) {
+export default function CardActions({ cardType, cardId, cardData, onCardAdded, onCardDeleted, showAddButton = false, showEditDelete = false, page = 'achievements' }) {
   const { isOwner, addCard, deleteCard, updateCard } = useOwnerAuth()
   const [showAddForm, setShowAddForm] = useState(false)
   const [showEditForm, setShowEditForm] = useState(false)
@@ -165,9 +178,9 @@ export default function CardActions({ cardType, cardId, cardData, onCardAdded, o
 
     try {
       const template = cardTemplates[cardType] || {}
-      const page = ['lab', 'process', 'package', 'whyus', 'blog'].includes(cardType) ? 'explore' : 'achievements'
+      const targetPage = ['lab', 'process', 'package', 'whyus', 'blog', 'competition'].includes(cardType) ? 'explore' : page
       const newData = { ...template, ...formData }
-      await addCard(cardType, newData, page)
+      await addCard(cardType, newData, targetPage)
       onCardAdded?.()
       setShowAddForm(false)
       alert(`New ${cardType} added! Refreshing...`)
