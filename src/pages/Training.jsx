@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback, Fragment } from "react";
 import { useOwnerAuth } from '../context/OwnerAuthContext';
 import AddCourseButton from '../components/AddCourseButton';
 import EditCourseButton from '../components/EditCourseButton';
+import EditableText from '../components/EditableText';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
@@ -47,12 +48,12 @@ const pathSteps = [
 
 // ── HELPER COMPONENTS ─────────────────────────────────────────────
 
-function StatBox({ num, label, color }) {
+function StatBox({ num, label, color, numId, labelId }) {
   return (
     <div className="relative px-5 py-4 min-w-[110px] bg-white/[.03] border border-white/[.07] backdrop-blur-lg overflow-hidden">
       <div className="absolute top-0 left-0 right-0 h-[1.5px]" style={{ background: color }} />
-      <div className="leading-none" style={{ ...bebasNeue, fontSize: "2rem", color }}>{num}</div>
-      <div className="text-[8px] font-bold tracking-[.32em] uppercase text-[#F0EAD6]/30 mt-1" style={syne}>{label}</div>
+      <div className="leading-none" style={{ ...bebasNeue, fontSize: "2rem", color }}><EditableText contentId={numId}>{num}</EditableText></div>
+      <div className="text-[8px] font-bold tracking-[.32em] uppercase text-[#F0EAD6]/30 mt-1" style={syne}><EditableText contentId={labelId}>{label}</EditableText></div>
     </div>
   );
 }
@@ -412,7 +413,7 @@ export default function TrainingPage() {
             <div className="inline-flex items-center gap-2 px-3.5 py-[7px] bg-[#FF6B35]/[.07] border border-[#FF6B35]/[.22] mb-[22px]">
               <span className="w-1.5 h-1.5 rounded-full bg-[#FF6B35] animate-pulse" />
               <span className="text-[9px] font-bold tracking-[.4em] uppercase text-[#FF6B35]" style={syne}>
-                Skill Development
+                <EditableText contentId="training.hero.badge">Skill Development</EditableText>
               </span>
             </div>
 
@@ -425,7 +426,8 @@ export default function TrainingPage() {
               WebkitTextFillColor:  "transparent",
               backgroundClip:       "text",
             }}>
-              Training<br />Programs
+              <EditableText contentId="training.hero.title-line1">Training</EditableText><br />
+              <EditableText contentId="training.hero.title-line2">Programs</EditableText>
             </h1>
 
             {/* Rule */}
@@ -434,18 +436,17 @@ export default function TrainingPage() {
             {/* Sub */}
             <p className="font-light leading-[1.8] text-[#F0EAD6]/50 tracking-[.02em] max-w-[480px]"
               style={{ ...dmSans, fontSize: "clamp(13px,1.3vw,15px)" }}>
-              From absolute beginner to advanced engineer — structured courses in embedded
-              systems, IoT, and AI with live projects and certifications.
+              <EditableText contentId="training.hero.description">From absolute beginner to advanced engineer — structured courses in embedded systems, IoT, and AI with live projects and certifications.</EditableText>
             </p>
           </div>
 
           {/* Right — stats */}
           <div className="flex flex-col gap-4 flex-shrink-0">
             <div className="flex gap-4">
-              {stats.slice(0, 2).map((s) => <StatBox key={s.label} {...s} />)}
+              {stats.slice(0, 2).map((s, index) => <StatBox key={s.label} {...s} numId={`training.stats.${index}.num`} labelId={`training.stats.${index}.label`} />)}
             </div>
             <div className="flex gap-4">
-              {stats.slice(2).map((s) => <StatBox key={s.label} {...s} />)}
+              {stats.slice(2).map((s, index) => <StatBox key={s.label} {...s} numId={`training.stats.${index + 2}.num`} labelId={`training.stats.${index + 2}.label`} />)}
             </div>
           </div>
         </div>
@@ -466,10 +467,10 @@ export default function TrainingPage() {
                 <div>
                   <div className="text-[8px] font-bold tracking-[.35em] uppercase mb-0.5"
                     style={{ ...syne, color: step.color }}>
-                    {step.tag}
+                    <EditableText contentId={`training.path.${i}.tag`}>{step.tag}</EditableText>
                   </div>
-                  <div className="text-[13px] font-bold" style={syne}>{step.title}</div>
-                  <div className="text-[11px] font-light text-[#F0EAD6]/40 mt-0.5" style={dmSans}>{step.sub}</div>
+                  <div className="text-[13px] font-bold" style={syne}><EditableText contentId={`training.path.${i}.title`}>{step.title}</EditableText></div>
+                  <div className="text-[11px] font-light text-[#F0EAD6]/40 mt-0.5" style={dmSans}><EditableText contentId={`training.path.${i}.sub`}>{step.sub}</EditableText></div>
                 </div>
               </div>
               {i < pathSteps.length - 1 && (
@@ -562,14 +563,14 @@ export default function TrainingPage() {
 
         <div className="relative z-[1]">
           <div className="text-[9px] font-bold tracking-[.35em] uppercase text-[#FF6B35] mb-2.5" style={syne}>
-            Custom Programs
+            <EditableText contentId="training.cta.badge">Custom Programs</EditableText>
           </div>
           <h2 className="leading-[.95] tracking-[-0.01em] mb-2.5" style={{ ...bebasNeue, fontSize: "clamp(28px,3.5vw,42px)" }}>
-            Need a tailored<br />training program?
+            <EditableText contentId="training.cta.title-line1">Need a tailored</EditableText><br />
+            <EditableText contentId="training.cta.title-line2">training program?</EditableText>
           </h2>
           <p className="text-[13px] font-light text-[#F0EAD6]/45 leading-[1.7] max-w-[460px]" style={dmSans}>
-            We design custom curricula for institutions, colleges, and corporate teams.
-            Tell us your requirements and we'll build the perfect program.
+            <EditableText contentId="training.cta.description">We design custom curricula for institutions, colleges, and corporate teams. Tell us your requirements and we'll build the perfect program.</EditableText>
           </p>
         </div>
 
@@ -578,7 +579,7 @@ export default function TrainingPage() {
           style={syne}
           onClick={() => setCtaModal(true)}
         >
-          Book a Consultation →
+          <EditableText contentId="training.cta.button">Book a Consultation →</EditableText>
         </button>
       </div>
 
