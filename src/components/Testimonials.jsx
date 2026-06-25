@@ -1,11 +1,13 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { useOwnerAuth } from '../context/OwnerAuthContext'
+import { normalizeTestimonials, removeTestimonialById } from '../utils/sectionContent'
 
 const bebasNeue = { fontFamily: "'Bebas Neue', sans-serif" }
 const syne      = { fontFamily: "'Syne', sans-serif" }
 const dmSans    = { fontFamily: "'DM Sans', sans-serif" }
 
 // ── DATA ──────────────────────────────────────────────────────────
-const testimonials = [
+const fallbackTestimonials = [
   {
     id: 1,
     quote: "I came in not knowing what a resistor was. I left with a working line-follower robot and a PCB I designed myself. Nimo Labs completely changed what I thought I was capable of.",
@@ -107,7 +109,7 @@ const testimonials = [
 const DURATION = 5000 // ms per slide
 
 // ── Rating dots ───────────────────────────────────────────────────
-function RatingDots({ count, color }) {
+function RatingDots({ count, color, rgb }) {
   return (
     <div className="flex items-center gap-1.5">
       {Array.from({ length: 5 }).map((_, i) => (
@@ -116,7 +118,7 @@ function RatingDots({ count, color }) {
           className="w-1.5 h-1.5 rounded-full"
           style={{
             background: i < count ? color : 'rgba(255,255,255,.12)',
-            boxShadow:  i < count ? `0 0 6px rgba(${testimonials.find(t=>t.color===color)?.rgb || '255,107,53'},.6)` : 'none',
+            boxShadow:  i < count ? `0 0 6px rgba(${rgb || '255,107,53'},.6)` : 'none',
           }}
         />
       ))}
@@ -125,7 +127,7 @@ function RatingDots({ count, color }) {
 }
 
 // ── Main Card ─────────────────────────────────────────────────────
-function TestimonialCard({ t, visible, direction }) {
+function TestimonialCard({ t, visible, direction, onDelete, isOwner }) {
   return (
     <div
       className="absolute inset-0"
@@ -213,7 +215,7 @@ function TestimonialCard({ t, visible, direction }) {
               </div>
 
               <div className="flex items-center gap-3">
-                <RatingDots count={t.rating} color={t.color} />
+                <RatingDots count={t.rating} color={t.color} rgb={t.rgb} />
                 <span className="text-[9px] font-bold tracking-[.2em] text-[#F0EAD6]/30" style={syne}>
                   {t.rating}.0
                 </span>
@@ -255,6 +257,15 @@ function TestimonialCard({ t, visible, direction }) {
                   {t.course}
                 </div>
               </div>
+
+              {isOwner && (
+                <button
+                  onClick={() => onDelete?.(t.id)}
+                  className="px-2.5 py-1.5 text-[8px] font-bold tracking-[.28em] uppercase border border-[#FF6B35]/[.35] text-[#FF6B35] bg-[#FF6B35]/[.08]"
+                >
+                  Delete
+                </button>
+              )}
 
               {/* Closing quote */}
               <div
@@ -311,15 +322,21 @@ function SideCard({ t, onClick, side }) {
 
 // ── MAIN EXPORT ───────────────────────────────────────────────────
 export default function Testimonials() {
-  const [idx,       setIdx]       = useState(0)
+  const { isOwner, getPageContent, savePageContent } = useOwnerAuth()
+  const [idx, setIdx] = useState(0)
   const [direction, setDirection] = useState('next')
-  const [paused,    setPaused]    = useState(false)
-  const [progress,  setProgress]  = useState(0)
+  const [paused, setPaused] = useState(false)
+  const [progress, setProgress] = useState(0)
+  const [testimonials, setTestimonials] = useState(fallbackTestimonials)
+  const [editing, setEditing] = useState(null)
+  const [draft, setDraft] = useState({ name: '', quote: '', city: '', course: '', track: 'Hardware', age: 16, rating: 5 })
 
-  const pausedRef   = useRef(false)
+  const pausedRef = useRef(false)
   const progressRef = useRef(0)
-  const rafRef      = useRef(null)
-  const lastRef     = useRef(null)
+  const rafRef = useRef(null)
+  const lastRef = useRef(null)
+
+  const list = testimonials.length ? testimonials : fallbackTestimonials
 
   const go = useCallback((nextIdx, dir = 'next') => {
     setDirection(dir)
@@ -329,8 +346,8 @@ export default function Testimonials() {
     lastRef.current = null
   }, [])
 
-  const prev = () => go((idx - 1 + testimonials.length) % testimonials.length, 'prev')
-  const next = useCallback(() => go((idx + 1) % testimonials.length, 'next'), [idx, go])
+  const prev = () => go((idx - 1 + list.length) % list.length, 'prev')
+  const next = useCallback(() => go((idx + 1) % list.length, 'next'), [idx, list.length, go])
 
   // RAF-driven progress bar + auto-advance
   useEffect(() => {
@@ -360,9 +377,69 @@ export default function Testimonials() {
   // Sync paused ref
   useEffect(() => { pausedRef.current = paused }, [paused])
 
-  const current = testimonials[idx]
-  const prevT   = testimonials[(idx - 1 + testimonials.length) % testimonials.length]
-  const nextT   = testimonials[(idx + 1) % testimonials.length]
+  useEffect(() => {
+    const loadContent = async () => {
+      try {
+        const content = await getPageContent('home')
+        const saved = content?.find((entry) => entry?.key === 'home-testimonials')
+        if (saved?.content) {
+          setTestimonials(normalizeTestimonials(saved.content))
+        }
+      } catch (error) {
+        console.error('Error loading testimonials:', error)
+      }
+    }
+
+    loadContent()
+  }, [getPageContent])
+
+  useEffect(() => {
+    if (testimonials.length && idx >= testimonials.length) {
+      setIdx(0)
+    }
+  }, [idx, testimonials.length])
+
+  const current = list[idx % list.length] || list[0]
+  const prevT = list[(idx - 1 + list.length) % list.length] || list[0]
+  const nextT = list[(idx + 1) % list.length] || list[0]
+
+  const startAdd = () => {
+    setEditing('new')
+    setDraft({ name: '', quote: '', city: '', course: '', track: 'Hardware', age: 16, rating: 5 })
+  }
+
+  const startEdit = (item) => {
+    setEditing(item.id)
+    setDraft({
+      name: item.name || '',
+      quote: item.quote || '',
+      city: item.city || '',
+      course: item.course || '',
+      track: item.track || 'Hardware',
+      age: item.age || 16,
+      rating: item.rating || 5,
+    })
+  }
+
+  const saveTestimonial = async () => {
+    const nextTestimonials = editing === 'new'
+      ? [...testimonials, { ...draft, id: `${draft.name || 'testimonial'}-${Date.now()}`, color: '#FF6B35', rgb: '255,107,53' }]
+      : testimonials.map((item) => item.id === editing ? { ...item, ...draft } : item)
+
+    setTestimonials(nextTestimonials)
+    await savePageContent('home', 'home-testimonials', nextTestimonials, 'Home testimonials')
+    setEditing(null)
+  }
+
+  const deleteTestimonial = async (testimonialId) => {
+    const nextTestimonials = removeTestimonialById(testimonials, testimonialId)
+    setTestimonials(nextTestimonials)
+    if (idx >= nextTestimonials.length) {
+      setIdx(Math.max(0, nextTestimonials.length - 1))
+    }
+    await savePageContent('home', 'home-testimonials', nextTestimonials, 'Home testimonials')
+    setEditing(null)
+  }
 
   return (
     <section
@@ -464,6 +541,36 @@ export default function Testimonials() {
           </div>
         </div>
 
+        {isOwner && (
+          <div className="flex justify-end gap-2 mb-8">
+            <button onClick={startAdd} className="px-3 py-2 text-[9px] font-bold tracking-[.28em] uppercase border border-white/[.12] bg-white/[.04] text-[#F0EAD6]">+ Add Testimonial</button>
+            {current && (
+              <button onClick={() => startEdit(current)} className="px-3 py-2 text-[9px] font-bold tracking-[.28em] uppercase border border-white/[.12] bg-white/[.04] text-[#F0EAD6]">Edit Current</button>
+            )}
+          </div>
+        )}
+
+        {editing && (
+          <div className="mb-8 rounded border border-white/[.1] bg-white/[.03] p-5 space-y-3">
+            <div className="grid gap-3 md:grid-cols-2">
+              <input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} placeholder="Name" className="bg-[#050508] border border-white/[.1] px-3 py-2 text-[12px] text-[#F0EAD6]" />
+              <input value={draft.city} onChange={(e) => setDraft({ ...draft, city: e.target.value })} placeholder="City" className="bg-[#050508] border border-white/[.1] px-3 py-2 text-[12px] text-[#F0EAD6]" />
+              <input value={draft.course} onChange={(e) => setDraft({ ...draft, course: e.target.value })} placeholder="Course" className="bg-[#050508] border border-white/[.1] px-3 py-2 text-[12px] text-[#F0EAD6]" />
+              <input value={draft.track} onChange={(e) => setDraft({ ...draft, track: e.target.value })} placeholder="Track" className="bg-[#050508] border border-white/[.1] px-3 py-2 text-[12px] text-[#F0EAD6]" />
+              <input type="number" value={draft.age} onChange={(e) => setDraft({ ...draft, age: Number(e.target.value) })} placeholder="Age" className="bg-[#050508] border border-white/[.1] px-3 py-2 text-[12px] text-[#F0EAD6]" />
+              <input type="number" min="1" max="5" value={draft.rating} onChange={(e) => setDraft({ ...draft, rating: Number(e.target.value) })} placeholder="Rating" className="bg-[#050508] border border-white/[.1] px-3 py-2 text-[12px] text-[#F0EAD6]" />
+            </div>
+            <textarea value={draft.quote} onChange={(e) => setDraft({ ...draft, quote: e.target.value })} placeholder="Quote" rows="4" className="w-full bg-[#050508] border border-white/[.1] px-3 py-2 text-[12px] text-[#F0EAD6]" />
+            <div className="flex flex-wrap gap-2">
+              <button onClick={saveTestimonial} className="px-3 py-2 text-[9px] font-bold tracking-[.28em] uppercase bg-[#FF6B35] text-white">Save</button>
+              <button onClick={() => setEditing(null)} className="px-3 py-2 text-[9px] font-bold tracking-[.28em] uppercase border border-white/[.12] text-[#F0EAD6]">Cancel</button>
+              {editing !== 'new' && (
+                <button onClick={() => deleteTestimonial(editing)} className="px-3 py-2 text-[9px] font-bold tracking-[.28em] uppercase border border-[#FF6B35]/[.4] text-[#FF6B35]">Delete</button>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* ── Main layout: prev-card | featured | next-card ── */}
         <div className="flex gap-4 items-stretch mb-8">
 
@@ -490,12 +597,14 @@ export default function Testimonials() {
 
             {/* Card stack */}
             <div className="relative w-full h-full" style={{ minHeight: 340 }}>
-              {testimonials.map((t, i) => (
+              {list.map((t, i) => (
                 <TestimonialCard
                   key={t.id}
                   t={t}
                   visible={i === idx}
                   direction={direction}
+                  onDelete={deleteTestimonial}
+                  isOwner={isOwner}
                 />
               ))}
             </div>
@@ -539,7 +648,7 @@ export default function Testimonials() {
 
           {/* Dot navigation */}
           <div className="flex items-center gap-2">
-            {testimonials.map((t, i) => (
+            {list.map((t, i) => (
               <button
                 key={t.id}
                 onClick={() => go(i, i > idx ? 'next' : 'prev')}
@@ -563,7 +672,7 @@ export default function Testimonials() {
               <span style={{ color: current.color, fontWeight: 700, transition: 'color .7s ease' }}>
                 {String(idx + 1).padStart(2, '0')}
               </span>
-              {' '}/ {String(testimonials.length).padStart(2, '0')}
+              {' '}/ {String(list.length).padStart(2, '0')}
             </span>
             {/* Pause indicator */}
             <div className="flex items-center gap-1.5">
@@ -590,7 +699,7 @@ export default function Testimonials() {
               className="flex gap-0 whitespace-nowrap"
               style={{ animation: 'tmqScroll 32s linear infinite' }}
             >
-              {[...testimonials, ...testimonials].map((t, i) => (
+              {[...list, ...list].map((t, i) => (
                 <div
                   key={i}
                   className="inline-flex items-center gap-4 px-6 border-r border-white/[.055] flex-shrink-0"
