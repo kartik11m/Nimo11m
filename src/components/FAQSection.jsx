@@ -1,18 +1,20 @@
 import { useState, useRef, useEffect } from 'react'
+import { useOwnerAuth } from '../context/OwnerAuthContext'
+import { buildFaqCategoryKey, getFaqCategoryPalette, normalizeFaqContent } from '../utils/sectionContent'
 
 const bebasNeue = { fontFamily: "'Bebas Neue', sans-serif" }
 const syne      = { fontFamily: "'Syne', sans-serif" }
 const dmSans    = { fontFamily: "'DM Sans', sans-serif" }
 
 // ── DATA ──────────────────────────────────────────────────────────
-const categories = [
+const defaultCategories = [
   { key: 'training',  label: 'Training',    color: '#FF6B35', rgb: '255,107,53'  },
   { key: 'camp',      label: 'Summer Camp', color: '#00F5FF', rgb: '0,245,255'   },
   { key: 'labsetup',  label: 'Lab Setup',   color: '#A855F7', rgb: '168,85,247'  },
   { key: 'general',   label: 'General',     color: '#FF006E', rgb: '255,0,110'   },
 ]
 
-const faqs = [
+const fallbackFaqs = [
   // ── Training ──────────────────────────────────────────────────
   {
     cat: 'training',
@@ -218,15 +220,92 @@ function FAQItem({ item, isOpen, onToggle, color, rgb }) {
 
 // ── MAIN EXPORT ───────────────────────────────────────────────────
 export default function FAQSection() {
+  const { isOwner, getPageContent, savePageContent } = useOwnerAuth()
+  const [categories, setCategories] = useState(defaultCategories)
   const [activeCategory, setActiveCategory] = useState('training')
-  const [openIdx,        setOpenIdx]        = useState(0)
+  const [openIdx, setOpenIdx] = useState(0)
+  const [faqs, setFaqs] = useState(fallbackFaqs.map((item, index) => ({ ...item, id: item.id || `${item.cat || 'faq'}-${index}` })))
+  const [editing, setEditing] = useState(null)
+  const [draft, setDraft] = useState({ cat: 'training', q: '', a: '' })
+  const [categoryDraft, setCategoryDraft] = useState({ key: '', label: '' })
 
-  const activeCat  = categories.find(c => c.key === activeCategory)
-  const filtered   = faqs.filter(f => f.cat === activeCategory)
+  useEffect(() => {
+    const loadContent = async () => {
+      try {
+        const content = await getPageContent('home')
+        const saved = content?.find((entry) => entry?.key === 'home-faqs')
+        if (saved?.content) {
+          const parsed = normalizeFaqContent(saved.content, defaultCategories)
+          setCategories(parsed.categories)
+          setFaqs(parsed.items)
+          if (!parsed.categories.some((cat) => cat.key === activeCategory)) {
+            setActiveCategory(parsed.categories[0]?.key || 'training')
+          }
+        }
+      } catch (error) {
+        console.error('Error loading FAQ content:', error)
+      }
+    }
+
+    loadContent()
+  }, [getPageContent])
+
+  const activeCat = categories.find(c => c.key === activeCategory) || categories[0] || defaultCategories[0]
+  const filtered = faqs.filter(f => f.cat === activeCategory)
 
   const handleCategoryChange = (key) => {
     setActiveCategory(key)
     setOpenIdx(0)
+  }
+
+  const startAdd = () => {
+    setEditing('new')
+    setDraft({ cat: activeCategory, q: '', a: '' })
+  }
+
+  const startEdit = (item) => {
+    setEditing(item.id)
+    setDraft({ cat: item.cat, q: item.q, a: item.a })
+  }
+
+  const saveFaq = async () => {
+    const nextFaqs = editing === 'new'
+      ? [...faqs, { ...draft, id: `${draft.cat}-${Date.now()}` }]
+      : faqs.map((item) => item.id === editing ? { ...item, ...draft } : item)
+
+    setFaqs(nextFaqs)
+    await savePageContent('home', 'home-faqs', { categories, items: nextFaqs }, 'Home FAQ items')
+    setEditing(null)
+    setDraft({ cat: activeCategory, q: '', a: '' })
+  }
+
+  const deleteFaq = async (itemId) => {
+    const nextFaqs = faqs.filter((item) => item.id !== itemId)
+    setFaqs(nextFaqs)
+    await savePageContent('home', 'home-faqs', { categories, items: nextFaqs }, 'Home FAQ items')
+  }
+
+  const addCategory = async () => {
+    const label = categoryDraft.label.trim()
+    if (!label) return
+
+    const key = buildFaqCategoryKey(label, categories)
+    const palette = getFaqCategoryPalette(categories.length)
+    const nextCategories = [...categories, { key, label, color: palette.color, rgb: palette.rgb }]
+    setCategories(nextCategories)
+    setActiveCategory(key)
+    setCategoryDraft({ key: '', label: '' })
+    await savePageContent('home', 'home-faqs', { categories: nextCategories, items: faqs }, 'Home FAQ items')
+  }
+
+  const deleteCategory = async (categoryKey) => {
+    if (categories.length <= 1) return
+    const nextCategories = categories.filter((cat) => cat.key !== categoryKey)
+    const nextFaqs = faqs.filter((item) => item.cat !== categoryKey)
+    setCategories(nextCategories)
+    setFaqs(nextFaqs)
+    setActiveCategory(nextCategories[0]?.key || 'training')
+    await savePageContent('home', 'home-faqs', { categories: nextCategories, items: nextFaqs }, 'Home FAQ items')
   }
 
   return (
@@ -319,16 +398,16 @@ export default function FAQSection() {
             {categories.map(cat => {
               const active = activeCategory === cat.key
               return (
-                <button
-                  key={cat.key}
-                  onClick={() => handleCategoryChange(cat.key)}
-                  className="relative text-left px-4 py-3 border cursor-pointer transition-all duration-300 overflow-hidden"
-                  style={{
-                    background:   active ? `rgba(${cat.rgb},.1)` : 'rgba(255,255,255,.02)',
-                    borderColor:  active ? `rgba(${cat.rgb},.45)` : 'rgba(255,255,255,.07)',
-                    boxShadow:    active ? `0 0 18px rgba(${cat.rgb},.18)` : 'none',
-                  }}
-                >
+                <div key={cat.key} className="relative">
+                  <button
+                    onClick={() => handleCategoryChange(cat.key)}
+                    className="w-full text-left px-4 py-3 border cursor-pointer transition-all duration-300 overflow-hidden"
+                    style={{
+                      background:   active ? `rgba(${cat.rgb},.1)` : 'rgba(255,255,255,.02)',
+                      borderColor:  active ? `rgba(${cat.rgb},.45)` : 'rgba(255,255,255,.07)',
+                      boxShadow:    active ? `0 0 18px rgba(${cat.rgb},.18)` : 'none',
+                    }}
+                  >
                   {/* Active left indicator */}
                   <div
                     className="absolute left-0 top-0 bottom-0 w-[2.5px] transition-all duration-300"
@@ -345,27 +424,127 @@ export default function FAQSection() {
                     {cat.label}
                   </span>
 
-                  {active && (
-                    <div className="text-[8px] font-light text-[#F0EAD6]/30 mt-0.5 tracking-[.04em]" style={dmSans}>
-                      {faqs.filter(f => f.cat === cat.key).length} questions
-                    </div>
+                    {active && (
+                      <div className="text-[8px] font-light text-[#F0EAD6]/30 mt-0.5 tracking-[.04em]" style={dmSans}>
+                        {faqs.filter(f => f.cat === cat.key).length} questions
+                      </div>
+                    )}
+                  </button>
+                  {isOwner && categories.length > 1 && (
+                    <button
+                      onClick={() => deleteCategory(cat.key)}
+                      className="absolute top-2 right-2 text-[8px] font-bold tracking-[.2em] uppercase text-[#FF6B35]"
+                    >
+                      ×
+                    </button>
                   )}
-                </button>
+                </div>
               )
             })}
+
+            {isOwner && (
+              <div className="w-full rounded border border-white/[.1] bg-white/[.03] p-3 space-y-2 mt-2">
+                <input
+                  value={categoryDraft.label}
+                  onChange={(e) => setCategoryDraft({ ...categoryDraft, label: e.target.value })}
+                  placeholder="Section name"
+                  className="w-full bg-[#050508] border border-white/[.1] px-3 py-2 text-[12px] text-[#F0EAD6]"
+                />
+                <div className="flex gap-2">
+                  <button onClick={addCategory} className="px-3 py-2 text-[9px] font-bold tracking-[.28em] uppercase bg-[#FF6B35] text-white">+ Add Section</button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* FAQ accordion */}
           <div className="flex flex-col gap-2">
+            {isOwner && (
+              <div className="flex justify-end mb-2">
+                <button
+                  onClick={startAdd}
+                  className="px-3 py-2 text-[9px] font-bold tracking-[.28em] uppercase border border-white/[.12] bg-white/[.04] text-[#F0EAD6]"
+                >
+                  + Add FAQ
+                </button>
+              </div>
+            )}
+            {editing === 'new' && (
+              <div className="rounded border border-white/[.1] bg-white/[.03] p-4 space-y-3">
+                <select
+                  value={draft.cat}
+                  onChange={(e) => setDraft({ ...draft, cat: e.target.value })}
+                  className="w-full bg-[#050508] border border-white/[.1] px-3 py-2 text-[12px] text-[#F0EAD6]"
+                >
+                  {categories.map((cat) => (
+                    <option key={cat.key} value={cat.key}>{cat.label}</option>
+                  ))}
+                </select>
+                <input
+                  value={draft.q}
+                  onChange={(e) => setDraft({ ...draft, q: e.target.value })}
+                  placeholder="Question"
+                  className="w-full bg-[#050508] border border-white/[.1] px-3 py-2 text-[12px] text-[#F0EAD6]"
+                />
+                <textarea
+                  value={draft.a}
+                  onChange={(e) => setDraft({ ...draft, a: e.target.value })}
+                  placeholder="Answer"
+                  rows="4"
+                  className="w-full bg-[#050508] border border-white/[.1] px-3 py-2 text-[12px] text-[#F0EAD6]"
+                />
+                <div className="flex gap-2">
+                  <button onClick={saveFaq} className="px-3 py-2 text-[9px] font-bold tracking-[.28em] uppercase bg-[#FF6B35] text-white">Save</button>
+                  <button onClick={() => setEditing(null)} className="px-3 py-2 text-[9px] font-bold tracking-[.28em] uppercase border border-white/[.12] text-[#F0EAD6]">Cancel</button>
+                </div>
+              </div>
+            )}
             {filtered.map((item, i) => (
-              <FAQItem
-                key={activeCategory + i}
-                item={item}
-                isOpen={openIdx === i}
-                onToggle={() => setOpenIdx(openIdx === i ? null : i)}
-                color={activeCat.color}
-                rgb={activeCat.rgb}
-              />
+              <div key={item.id}>
+                <FAQItem
+                  item={item}
+                  isOpen={openIdx === i}
+                  onToggle={() => setOpenIdx(openIdx === i ? null : i)}
+                  color={activeCat.color}
+                  rgb={activeCat.rgb}
+                />
+                {isOwner && (
+                  <div className="mt-2 flex gap-2 justify-end">
+                    <button onClick={() => startEdit(item)} className="px-2.5 py-1.5 text-[8px] font-bold tracking-[.24em] uppercase border border-white/[.12] bg-white/[.04] text-[#F0EAD6]">Edit</button>
+                    <button onClick={() => deleteFaq(item.id)} className="px-2.5 py-1.5 text-[8px] font-bold tracking-[.24em] uppercase border border-[#FF6B35]/[.4] text-[#FF6B35]">Delete</button>
+                  </div>
+                )}
+                {editing === item.id && (
+                  <div className="mt-2 rounded border border-white/[.1] bg-white/[.03] p-4 space-y-3">
+                    <select
+                      value={draft.cat}
+                      onChange={(e) => setDraft({ ...draft, cat: e.target.value })}
+                      className="w-full bg-[#050508] border border-white/[.1] px-3 py-2 text-[12px] text-[#F0EAD6]"
+                    >
+                      {categories.map((cat) => (
+                        <option key={cat.key} value={cat.key}>{cat.label}</option>
+                      ))}
+                    </select>
+                    <input
+                      value={draft.q}
+                      onChange={(e) => setDraft({ ...draft, q: e.target.value })}
+                      placeholder="Question"
+                      className="w-full bg-[#050508] border border-white/[.1] px-3 py-2 text-[12px] text-[#F0EAD6]"
+                    />
+                    <textarea
+                      value={draft.a}
+                      onChange={(e) => setDraft({ ...draft, a: e.target.value })}
+                      placeholder="Answer"
+                      rows="4"
+                      className="w-full bg-[#050508] border border-white/[.1] px-3 py-2 text-[12px] text-[#F0EAD6]"
+                    />
+                    <div className="flex gap-2">
+                      <button onClick={saveFaq} className="px-3 py-2 text-[9px] font-bold tracking-[.28em] uppercase bg-[#FF6B35] text-white">Save</button>
+                      <button onClick={() => setEditing(null)} className="px-3 py-2 text-[9px] font-bold tracking-[.28em] uppercase border border-white/[.12] text-[#F0EAD6]">Cancel</button>
+                    </div>
+                  </div>
+                )}
+              </div>
             ))}
           </div>
 
