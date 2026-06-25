@@ -13,12 +13,35 @@ const REACTION_MS = 5000
 
 // ── Section data ──────────────────────────────────────────────────
 const sections = [
-  { id:'home-hero',     label:'Welcome',     line1:'Step into the future of robotics education.',      line2:'Scroll to explore everything Nimo Labs offers.',    accent:'#FF6B35' },
-  { id:'home-services', label:'Services',    line1:'School workshops, college programs & live demos.', line2:'Every session is designed to spark curiosity.',     accent:'#A855F7' },
-  { id:'home-robots',   label:'Robots',      line1:'See the machines our students build and control.', line2:'From Arduino bots to autonomous systems.',           accent:'#00F5FF' },
-  { id:'home-training', label:'Training',    line1:'Structured courses from beginner to advanced.',    line2:'Build real skills with hands-on projects.',          accent:'#FF6B35' },
-  { id:'home-summer',   label:'Summer Camp', line1:'5-day immersive robotics bootcamp, ages 10–18.',   line2:'Design, build, and program — from scratch.',        accent:'#FF006E' },
-  { id:'home-events',   label:'Events',      line1:'Live showcases, workshops, and STEM fairs.',       line2:'Watch students bring their robots to life.',         accent:'#00F5FF' },
+  { id:'home-hero',          label:'Welcome',      line1:'A warm welcome to the future of robotics education.',      line2:'Scroll to explore the full Nimo Labs experience.',           accent:'#FF6B35' },
+  { id:'home-services',      label:'Services',     line1:'Hands-on workshops, demos, and program design for curious minds.', line2:'Practical experiences that make innovation feel real.',      accent:'#A855F7' },
+  { id:'home-summer',        label:'Summer Camp',  line1:'A high-energy camp where ideas become working robots.',    line2:'Build, test, and learn from the ground up.',                  accent:'#FF006E' },
+  { id:'home-robots',        label:'Robots',       line1:'See the machines our students build, code, and control.',   line2:'From Arduino bots to autonomous systems.',                    accent:'#00F5FF' },
+  { id:'home-training',      label:'Training',     line1:'Structured pathways from beginner fundamentals to advanced builds.', line2:'Learn with real projects, mentors, and hands-on momentum.', accent:'#FF6B35' },
+  { id:'home-events',        label:'Events',       line1:'Live showcases, team challenges, and STEM experiences in motion.', line2:'Watch ideas turn into action in front of you.',               accent:'#00F5FF' },
+  { id:'home-achievements',  label:'Achievements', line1:'Milestones, awards, and impact stories that keep momentum growing.', line2:'A closer look at the journeys behind every win.',             accent:'#FF006E' },
+  { id:'home-partners',      label:'Partners',     line1:'Trusted by schools, colleges, and innovation-focused teams.', line2:'A growing network of mentors, collaborators, and changemakers.', accent:'#8B31E8' },
+  { id:'home-lab-setup',     label:'Lab Setup',    line1:'Turn classrooms into future-ready robotics spaces.',        line2:'We help institutions build hands-on systems that last.',      accent:'#00F5FF' },
+  { id:'home-testimonials',  label:'Voices',       line1:'Students and educators share what makes the experience memorable.', line2:'Real stories from real learning journeys.',                 accent:'#FF6B35' },
+  { id:'home-blog',          label:'Stories',      line1:'Behind-the-scenes updates, ideas, and learning insights.',  line2:'Explore the thinking behind our workshop floor and beyond.', accent:'#A855F7' },
+  { id:'home-contact',       label:'Connect',      line1:'Bring robotics to your campus, club, or next big event.',   line2:'Let’s start a conversation about your next program.',         accent:'#FF6B35' },
+  { id:'home-faq',           label:'FAQ',          line1:'Clear answers for families, schools, and teams exploring robotics.', line2:'Everything you need to know before you begin.',             accent:'#A855F7' },
+]
+
+const sectionPresets = [
+  { eyes: { x: 1, y: 0.8 }, head: { z: 0.06 }, arms: { left: { z: -0.22, x: -0.06 }, right: { z: 0.22, x: 0.06 } }, pivot: { y: 0.08, x: -0.02 }, light: 2.8 },
+  { eyes: { x: 1.03, y: 0.76 }, head: { z: 0.04 }, arms: { left: { z: -0.4, x: -0.05 }, right: { z: 0.22, x: 0.03 } }, pivot: { y: 0.04, x: -0.03 }, light: 3.2 },
+  { eyes: { x: 1.22, y: 0.68 }, head: { z: 0.11 }, arms: { left: { z: -0.72, x: -0.12 }, right: { z: 0.72, x: 0.12 } }, pivot: { y: 0.16, x: -0.01 }, light: 4.2 },
+  { eyes: { x: 1.14, y: 0.72 }, head: { z: -0.05 }, arms: { left: { z: -0.2, x: -0.05 }, right: { z: 0.2, x: 0.05 } }, pivot: { y: 0.1, x: 0.08 }, light: 3.8 },
+  { eyes: { x: 1.02, y: 0.78 }, head: { z: 0.08 }, arms: { left: { z: -0.55, x: -0.16 }, right: { z: 0.35, x: 0.08 } }, pivot: { y: 0.12, x: 0.06 }, light: 3.4 },
+  { eyes: { x: 1.18, y: 0.7 }, head: { z: -0.08 }, arms: { left: { z: -0.9, x: -0.15 }, right: { z: 0.9, x: 0.15 } }, pivot: { y: 0.18, x: -0.02 }, light: 4.6 },
+  { eyes: { x: 0.96, y: 0.88 }, head: { z: 0.12 }, arms: { left: { z: -0.28, x: -0.05 }, right: { z: 0.28, x: 0.05 } }, pivot: { y: 0.08, x: -0.04 }, light: 3.5 },
+  { eyes: { x: 1.04, y: 0.84 }, head: { z: 0.02 }, arms: { left: { z: -0.36, x: -0.08 }, right: { z: 0.16, x: 0.04 } }, pivot: { y: 0.05, x: 0.02 }, light: 3.1 },
+  { eyes: { x: 1.08, y: 0.74 }, head: { z: -0.03 }, arms: { left: { z: -0.12, x: -0.02 }, right: { z: 0.12, x: 0.02 } }, pivot: { y: 0.06, x: -0.06 }, light: 3.6 },
+  { eyes: { x: 0.98, y: 0.86 }, head: { z: 0.05 }, arms: { left: { z: -0.18, x: -0.04 }, right: { z: 0.18, x: 0.04 } }, pivot: { y: 0.07, x: 0.03 }, light: 3.1 },
+  { eyes: { x: 1.02, y: 0.82 }, head: { z: 0.03 }, arms: { left: { z: -0.24, x: -0.06 }, right: { z: 0.24, x: 0.06 } }, pivot: { y: 0.06, x: -0.03 }, light: 3.2 },
+  { eyes: { x: 1.1, y: 0.76 }, head: { z: 0.09 }, arms: { left: { z: -0.54, x: -0.12 }, right: { z: 0.42, x: 0.08 } }, pivot: { y: 0.11, x: 0.04 }, light: 3.7 },
+  { eyes: { x: 1.06, y: 0.78 }, head: { z: 0.06 }, arms: { left: { z: -0.3, x: -0.08 }, right: { z: 0.3, x: 0.08 } }, pivot: { y: 0.09, x: -0.02 }, light: 3.3 },
 ]
 
 // ── Reaction pools ────────────────────────────────────────────────
@@ -82,6 +105,7 @@ export default function ScrollRobotGuide() {
   /* DOM */
   const wrapperRef = useRef(null)
   const canvasRef  = useRef(null)
+  const bubbleRef  = useRef(null)
 
   /* Three.js */
   const rafRef   = useRef(null)
@@ -98,6 +122,7 @@ export default function ScrollRobotGuide() {
   const blinkTimerRef   = useRef(null)   // ← random blink scheduler
   const idleTlRef       = useRef(null)
   const returnTlRef     = useRef(null)
+  const loopTlRef       = useRef(null)
   const lastInteractRef = useRef(Date.now())
   const clickTimerRef   = useRef(null)
   const clickCountRef   = useRef(0)
@@ -128,6 +153,74 @@ export default function ScrollRobotGuide() {
     const pool = REACTIONS[type]
     setReaction({ text: pool[Math.floor(Math.random() * pool.length)], key: Date.now() })
     setTimeout(() => setReaction(null), REACTION_MS)
+  }, [])
+
+  const playSectionMood = useCallback((index) => {
+    const eve = eveRef.current
+    const pivot = pivotRef.current
+    const preset = sectionPresets[index] || sectionPresets[0]
+    if (!eve || !pivot) return
+
+    if (loopTlRef.current) {
+      loopTlRef.current.kill()
+      loopTlRef.current = null
+    }
+
+    const sc = eyeScales(eve)
+    const head = eve.getObjectByName('head')
+    const leftArm = eve.getObjectByName('leftArm')
+    const rightArm = eve.getObjectByName('rightArm')
+    const el = eve.getObjectByName('eyeLight')
+
+    gsap.killTweensOf([pivot.position, pivot.rotation, sc, head?.rotation, leftArm?.rotation, rightArm?.rotation, el])
+    gsap.set(pivot.rotation, { x: 0, y: 0, z: 0 })
+    gsap.set(pivot.position, { y: 0 })
+    if (head) gsap.set(head.rotation, { z: 0 })
+    if (leftArm) gsap.set(leftArm.rotation, { z: 0, x: 0 })
+    if (rightArm) gsap.set(rightArm.rotation, { z: 0, x: 0 })
+
+    const tl = gsap.timeline()
+    tl.to(sc, { x: preset.eyes.x, y: preset.eyes.y, duration: 0.2, ease: 'power2.out' }, 0)
+      .to(pivot.position, { y: preset.pivot.y, duration: 0.2, ease: 'power2.out' }, 0)
+      .to(pivot.rotation, { x: preset.pivot.x, y: preset.pivot.x * 0.6, duration: 0.24, ease: 'power2.out' }, 0)
+      .to(el || {}, { intensity: preset.light, duration: 0.2, ease: 'power2.out' }, 0)
+
+    if (head) tl.to(head.rotation, { z: preset.head.z, duration: 0.22, ease: 'power2.out' }, 0.02)
+    if (leftArm) tl.to(leftArm.rotation, { z: preset.arms.left.z, x: preset.arms.left.x, duration: 0.24, ease: 'power2.out' }, 0.02)
+    if (rightArm) tl.to(rightArm.rotation, { z: preset.arms.right.z, x: preset.arms.right.x, duration: 0.24, ease: 'power2.out' }, 0.02)
+
+    tl.to(pivot.position, { y: 0, duration: 0.34, ease: 'bounce.out' }, 0.24)
+
+    if (index === 6) {
+      loopTlRef.current = gsap.timeline({ repeat: -1, yoyo: true, repeatRefresh: true })
+        .to(pivot.position, { y: 0.16, duration: 0.38, ease: 'sine.inOut' }, 0)
+        .to(head?.rotation || {}, { z: 0.12, duration: 0.28, ease: 'sine.inOut' }, 0)
+        .to(leftArm?.rotation || {}, { z: -0.72, x: -0.14, duration: 0.28, ease: 'sine.inOut' }, 0)
+        .to(rightArm?.rotation || {}, { z: 0.72, x: 0.14, duration: 0.28, ease: 'sine.inOut' }, 0)
+        .to(sc, { x: 1.16, y: 0.9, duration: 0.24, ease: 'power2.inOut' }, 0)
+        .to(el || {}, { intensity: 6.4, duration: 0.2, ease: 'sine.inOut' }, 0)
+    }
+
+    if (index === 5) {
+      loopTlRef.current = gsap.timeline({ repeat: -1, yoyo: true, repeatRefresh: true })
+        .to(pivot.position, { y: 0.14, duration: 0.3, ease: 'sine.inOut' }, 0)
+        .to(pivot.rotation, { x: 0.1, y: 0.12, duration: 0.3, ease: 'sine.inOut' }, 0)
+        .to(head?.rotation || {}, { z: -0.08, duration: 0.24, ease: 'sine.inOut' }, 0)
+        .to(leftArm?.rotation || {}, { z: -1.02, x: -0.18, duration: 0.24, ease: 'sine.inOut' }, 0)
+        .to(rightArm?.rotation || {}, { z: 1.02, x: 0.18, duration: 0.24, ease: 'sine.inOut' }, 0)
+        .to(sc, { x: 1.12, y: 0.72, duration: 0.22, ease: 'power2.inOut' }, 0)
+        .to(el || {}, { intensity: 7.2, duration: 0.18, ease: 'sine.inOut' }, 0)
+    }
+
+    if (index === 11 || index === 12) {
+      loopTlRef.current = gsap.timeline({ repeat: -1, yoyo: true, repeatRefresh: true })
+        .to(pivot.position, { y: 0.08, duration: 0.55, ease: 'sine.inOut' }, 0)
+        .to(head?.rotation || {}, { z: 0.05, duration: 0.45, ease: 'sine.inOut' }, 0)
+        .to(leftArm?.rotation || {}, { z: -0.28, x: -0.06, duration: 0.45, ease: 'sine.inOut' }, 0)
+        .to(rightArm?.rotation || {}, { z: 0.28, x: 0.06, duration: 0.45, ease: 'sine.inOut' }, 0)
+        .to(sc, { x: 1.03, y: 0.84, duration: 0.4, ease: 'power2.inOut' }, 0)
+        .to(el || {}, { intensity: 3.4, duration: 0.32, ease: 'sine.inOut' }, 0)
+    }
   }, [])
 
   /* ── Reset idle ───────────────────────────────────────────── */
@@ -346,15 +439,16 @@ export default function ScrollRobotGuide() {
       rafRef.current = requestAnimationFrame(tick)
       const t = clockRef.current.getElapsedTime()
       if (!isAnimRef.current && !isDraggingRef.current) {
-        bob.position.y = Math.sin(t*1.3)*.09
+        const idlePulse = Math.sin(t * 1.7) * 0.012
+        bob.position.y = Math.sin(t*1.3)*.09 + idlePulse
         bob.rotation.z = Math.sin(t*.85)*.022
         const la=eve.getObjectByName('leftArm'), ra=eve.getObjectByName('rightArm')
-        if (la) la.rotation.z =  Math.sin(t*1.1)*.06
-        if (ra) ra.rotation.z = -Math.sin(t*1.1)*.06
+        if (la) la.rotation.z =  Math.sin(t*1.1)*.06 + idlePulse * 0.4
+        if (ra) ra.rotation.z = -Math.sin(t*1.1)*.06 - idlePulse * 0.4
         pivot.rotation.y += (lookRef.current.x - pivot.rotation.y)*.08
         pivot.rotation.x += (lookRef.current.y - pivot.rotation.x)*.08
       }
-      if (el) el.intensity = 2.5 + Math.sin(t*2.2)*.6
+      if (el) el.intensity = 2.5 + Math.sin(t*2.2)*.6 + Math.sin(t*1.1)*0.12
       renderer.render(scene, camera)
     }
     tick()
@@ -396,7 +490,27 @@ export default function ScrollRobotGuide() {
         .to(sc, { y:.1, duration:.06, ease:'power3.in'  }, '+=.08')
         .to(sc, { y:1,  duration:.1,  ease:'power2.out' })
 
-      gsap.timeline({ onComplete:()=>{ setActiveIdx(i); setFading(false) } })
+      if (bubbleRef.current) {
+        gsap.to(bubbleRef.current, {
+          opacity: 0,
+          y: 10,
+          scale: 0.97,
+          filter: 'blur(3px)',
+          duration: 0.2,
+          ease: 'power2.in',
+          overwrite: true,
+        })
+      }
+
+      playSectionMood(i)
+
+      gsap.timeline({ onComplete:()=>{ 
+        setActiveIdx(i)
+        setFading(false)
+        if (bubbleRef.current) {
+          gsap.fromTo(bubbleRef.current, { opacity: 0, y: 10, scale: 0.97, filter: 'blur(3px)' }, { opacity: 1, y: 0, scale: 1, filter: 'blur(0px)', duration: 0.28, ease: 'power2.out', overwrite: true })
+        }
+      }})
         .to(pivot.rotation, { y:(i/(sections.length-1)-.5)*.55, x:-.06, duration:.65, ease:'back.out(1.6)' }, 0)
         .to(pivot.position, { y:.28, duration:.20, ease:'power2.out' }, 0)
         .to(pivot.position, { y:0,   duration:.50, ease:'bounce.out'  }, .2)
@@ -540,6 +654,7 @@ export default function ScrollRobotGuide() {
       clearTimeout(blinkTimerRef.current)
       if (idleTlRef.current)   idleTlRef.current.kill()
       if (returnTlRef.current) returnTlRef.current.kill()
+      if (loopTlRef.current)   loopTlRef.current.kill()
       triggers.forEach(t=>t.kill())
       renderer.dispose()
       window.removeEventListener('scroll',    onInteract)
@@ -572,12 +687,14 @@ export default function ScrollRobotGuide() {
       <div className="relative mb-6 pointer-events-auto flex flex-col items-end gap-2">
 
         {/* Full bubble */}
-        <div style={{
+        <div ref={bubbleRef} style={{
           maxHeight: minimized ? 0 : 320, width:230,
           opacity:   minimized ? 0 : fading ? 0 : 1,
           transform: minimized ? 'translateY(10px) scale(.95)' : fading ? 'translateY(5px) scale(.97)' : 'translateY(0) scale(1)',
           overflow:'hidden', pointerEvents: minimized ? 'none' : 'auto',
-          transition:'max-height .4s cubic-bezier(.16,1,.3,1), opacity .25s ease, transform .25s ease',
+          transition:'max-height .4s cubic-bezier(.16,1,.3,1), opacity .25s ease, transform .25s ease, filter .25s ease',
+          willChange:'transform, opacity, filter',
+          filter: fading ? 'blur(3px)' : 'blur(0px)',
         }}>
           <div className="relative p-4 overflow-hidden" style={{
             background:'rgba(5,5,8,.92)', border:'1px solid rgba(255,255,255,.08)',
