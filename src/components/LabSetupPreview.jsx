@@ -1,11 +1,12 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
+import { useOwnerAuth } from '../context/OwnerAuthContext'
 
 const bebasNeue = { fontFamily: "'Bebas Neue', sans-serif" }
 const syne      = { fontFamily: "'Syne', sans-serif" }
 const dmSans    = { fontFamily: "'DM Sans', sans-serif" }
 
-const labTypes = [
+const fallbackLabTypes = [
   { icon: '🤖', name: 'Robotics Lab',      color: '#FF6B35', rgb: '255,107,53', area: '400–800 sq ft', cap: '24–32 Students' },
   { icon: '🧠', name: 'AI & ML Lab',        color: '#00F5FF', rgb: '0,245,255',  area: '300–600 sq ft', cap: '20–28 Students' },
   { icon: '🔬', name: 'ATL Lab',            color: '#A855F7', rgb: '168,85,247', area: '500–1000 sq ft',cap: '30–40 Students', badge: 'AIM Compliant' },
@@ -62,6 +63,45 @@ function LabPill({ lab }) {
 }
 
 export default function LabSetupPreview() {
+  const { getCards } = useOwnerAuth()
+  const [labTypes, setLabTypes] = useState(fallbackLabTypes)
+  const [loadingLabs, setLoadingLabs] = useState(true)
+
+  useEffect(() => {
+    let active = true
+
+    const loadLabs = async () => {
+      try {
+        const cards = await getCards('lab', 'explore')
+        const mapped = (cards || [])
+          .filter((card) => card?.data)
+          .map((card) => {
+            const data = card.data || {}
+            return {
+              icon: data.icon || '🤖',
+              name: data.name || 'STEM Lab',
+              color: data.color || '#FF6B35',
+              rgb: data.rgb || '255,107,53',
+              area: data.area || 'Custom',
+              cap: data.capacity || 'Flexible',
+              badge: data.badge || null,
+            }
+          })
+
+        if (active && mapped.length > 0) {
+          setLabTypes(mapped.slice(0, 8))
+        }
+      } catch (error) {
+        console.error('Error loading lab preview:', error)
+      } finally {
+        if (active) setLoadingLabs(false)
+      }
+    }
+
+    loadLabs()
+    return () => { active = false }
+  }, [getCards])
+
   return (
     <section className="relative overflow-hidden py-[84px] bg-[#050508] border-y border-white/[.055]">
 
@@ -130,9 +170,15 @@ export default function LabSetupPreview() {
 
           {/* Lab types grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-            {labTypes.map(lab => (
-              <LabPill key={lab.name} lab={lab} />
-            ))}
+            {loadingLabs ? (
+              <div className="sm:col-span-2 rounded border border-white/[.08] bg-white/[.02] px-4 py-5 text-[12px] text-[#F0EAD6]/45">
+                Loading lab solutions…
+              </div>
+            ) : (
+              labTypes.map(lab => (
+                <LabPill key={lab.name} lab={lab} />
+              ))
+            )}
           </div>
 
           {/* Right: audience + stat card */}
