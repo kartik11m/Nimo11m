@@ -1,11 +1,13 @@
 import { useState, useRef, useCallback, useEffect, Fragment } from "react";
 import { Link } from "react-router-dom";
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+
 const bebasNeue = { fontFamily: "'Bebas Neue', sans-serif" };
 const syne      = { fontFamily: "'Syne', sans-serif" };
 const dmSans    = { fontFamily: "'DM Sans', sans-serif" };
 
-const previewCourses = [
+const fallbackCourses = [
   {
     title: "Arduino Masterclass",
     sub: "Embedded Systems",
@@ -254,6 +256,42 @@ function PreviewCard({ course }) {
 
 // ── MAIN EXPORT ───────────────────────────────────────────────────
 export default function TrainingPreview() {
+  const [courses, setCourses] = useState(fallbackCourses)
+  const [loadingCourses, setLoadingCourses] = useState(true)
+
+  useEffect(() => {
+    const fetchCourses = async () => {
+      try {
+        const res = await fetch(`${API_URL}/courses`)
+        const data = await res.json()
+        if (data.success) {
+          const mapped = (data.courses || [])
+            .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+            .map((course) => ({
+              title: course.title || 'Untitled course',
+              sub: course.sub || 'Training Program',
+              level: course.level || 'beginner',
+              desc: course.description || 'A hands-on training experience built for real-world outcomes.',
+              duration: course.duration || 'Flexible',
+              sessions: course.sessions || 'Live sessions',
+              price: course.price || 'Contact us',
+              icon: course.level === 'advanced' ? '🤖' : course.level === 'intermediate' ? '📡' : '⚙️',
+            }))
+
+          if (mapped.length > 0) {
+            setCourses(mapped.slice(0, 3))
+          }
+        }
+      } catch (error) {
+        console.error('Error loading training preview:', error)
+      } finally {
+        setLoadingCourses(false)
+      }
+    }
+
+    fetchCourses()
+  }, [])
+
   useEffect(() => {
     const link = document.createElement("link");
     link.rel   = "stylesheet";
@@ -356,9 +394,15 @@ export default function TrainingPreview() {
 
         {/* ── Cards Grid ── */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mb-10">
-          {previewCourses.map((c) => (
-            <PreviewCard key={c.title} course={c} />
-          ))}
+          {loadingCourses && courses.length === fallbackCourses.length ? (
+            <div className="col-span-full rounded border border-white/[.08] bg-white/[.02] px-4 py-4 text-[11px] text-[#F0EAD6]/45">
+              Loading training programs…
+            </div>
+          ) : (
+            courses.slice(0, 3).map((c) => (
+              <PreviewCard key={c.title} course={c} />
+            ))
+          )}
         </div>
 
         {/* ── Bottom strip: learning path ── */}
