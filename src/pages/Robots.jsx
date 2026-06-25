@@ -7,6 +7,7 @@ import ChapterVideoGallery   from '../components/ChapterVideoGallery'
 import ChapterPhotoGallery   from '../components/ChapterPhotoGallery'
 import ChapterHeader        from '../components/ChapterHeader'
 import AddChapterButton     from '../components/AddChapterButton'
+import EditableText         from '../components/EditableText'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
@@ -180,37 +181,35 @@ export default function RobotsPage() {
               <div className="inline-flex items-center gap-2 px-3.5 py-[7px] bg-[#FF6B35]/[.07] border border-[#FF6B35]/[.22] mb-[22px]">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#FF6B35] animate-pulse" />
                 <span className="text-[9px] font-bold tracking-[.4em] uppercase text-[#FF6B35]" style={syne}>
-                  Nimo Labs · Robotics Program
+                  <EditableText contentId="robots.hero.badge">Nimo Labs · Robotics Program</EditableText>
                 </span>
               </div>
               <div className="mb-5">
                 <span className="block leading-[.88] tracking-[-0.01em]" style={{
                   ...bebasNeue, fontSize: 'clamp(56px,10vw,108px)',
                   WebkitTextStroke: '1px rgba(240,234,214,.35)', color: 'transparent',
-                }}>BUILD</span>
+                }}><EditableText contentId="robots.hero.title-line1">BUILD</EditableText></span>
                 <span className="block leading-[.88] tracking-[-0.01em] text-[#FF6B35]" style={{
                   ...bebasNeue, fontSize: 'clamp(56px,10vw,108px)',
                   textShadow: '0 0 50px rgba(255,107,53,.35)',
-                }}>ROBOTS</span>
+                }}><EditableText contentId="robots.hero.title-line2">ROBOTS</EditableText></span>
                 <span className="block mt-2 font-bold tracking-[.2em] uppercase text-[#00F5FF]"
                   style={{ ...syne, fontSize: 'clamp(12px,1.6vw,17px)' }}>
-                  From Circuit To Autonomous Machine
+                  <EditableText contentId="robots.hero.subtitle">From Circuit To Autonomous Machine</EditableText>
                 </span>
               </div>
               <div className="w-14 h-px mb-6" style={{ background: 'linear-gradient(90deg,#FF6B35,transparent)' }} />
               <p className="font-light leading-[1.8] text-[#F0EAD6]/50 max-w-[440px] mb-8 tracking-[.02em]"
                 style={{ ...dmSans, fontSize: 'clamp(13px,1.3vw,15px)' }}>
-                A three-chapter deep-dive into robotics engineering. Hardware, firmware,
-                and intelligence — everything you need to take an idea from a blank PCB
-                to a fully autonomous machine.
+                <EditableText contentId="robots.hero.description">A three-chapter deep-dive into robotics engineering. Hardware, firmware, and intelligence — everything you need to take an idea from a blank PCB to a fully autonomous machine.</EditableText>
               </p>
               <div className="flex gap-3 flex-wrap">
                 <Link to="/book"
                   className="text-[10px] font-bold tracking-[.32em] uppercase text-white bg-[#FF6B35] px-7 py-3.5 no-underline shadow-[0_0_24px_rgba(255,107,53,.25)] hover:bg-[#ff8040] hover:shadow-[0_0_40px_rgba(255,107,53,.5)] hover:-translate-y-px transition-all duration-300 inline-block"
-                  style={syne}>Book a Workshop</Link>
+                  style={syne}><EditableText contentId="robots.hero.cta-primary">Book a Workshop</EditableText></Link>
                 <Link to="/training"
                   className="text-[10px] font-semibold tracking-[.32em] uppercase text-[#F0EAD6]/50 bg-white/[.03] border border-white/10 px-7 py-3.5 no-underline hover:border-[#00F5FF] hover:text-[#00F5FF] hover:bg-[#00F5FF]/[.04] transition-all duration-300 inline-block"
-                  style={syne}>View Courses</Link>
+                  style={syne}><EditableText contentId="robots.hero.cta-secondary">View Courses</EditableText></Link>
               </div>
             </div>
 
@@ -242,8 +241,8 @@ export default function RobotsPage() {
         <div className="max-w-[1100px] mx-auto">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div>
-              <h2 className="text-3xl font-bold text-white mb-2" style={syne}>📚 Manage Your Chapters</h2>
-              <p className="text-base text-white/60" style={dmSans}>Create new chapters or edit existing ones to organize your robotics content</p>
+              <h2 className="text-3xl font-bold text-white mb-2" style={syne}><EditableText contentId="robots.manage.title">📚 Manage Your Chapters</EditableText></h2>
+              <p className="text-base text-white/60" style={dmSans}><EditableText contentId="robots.manage.description">Create new chapters or edit existing ones to organize your robotics content</EditableText></p>
             </div>
             <div className="flex-shrink-0">
               <AddChapterButton />
