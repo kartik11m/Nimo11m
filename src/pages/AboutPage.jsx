@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useOwnerAuth } from '../context/OwnerAuthContext'
 
 /* ─────────────────────────────────────────────────────────────────
    THEME TOKENS  (inline style helpers — match cinematic theme)
@@ -94,6 +95,70 @@ const DIFF_CARDS = [
   { icon: '🚀', title: 'Lifelong Community',     accent: C.cyan,   accentDim: 'rgba(0,223,255,.06)', accentBorder: 'rgba(0,223,255,.28)',  titleGrad: gradCyanPurple,
     body: "Once a Nimo Labs student, always part of the community. Alumni get access to advanced programs, competition teams, and our robot lab — forever." },
 ]
+
+const getDefaultAboutContent = () => ({
+  hero: {
+    eyebrow: "Our Story",
+    titleLine1: 'BEYOND THE',
+    titleLine2: 'CLASSROOM',
+    subtitle: "Bhopal's First Hands-On Robotics Education Lab",
+    highlights: [
+      { dot: C.orange, t: 'Est. 2022' },
+      { dot: C.cyan, t: 'Bhopal, Madhya Pradesh' },
+      { dot: C.purple, t: '500+ Students' },
+      { dot: C.pink, t: '20+ Schools' },
+    ],
+  },
+  visionCards: [
+    {
+      num: '01', label: 'Our Vision', accent: C.orange, topLine: `linear-gradient(90deg,${C.orange},${C.pink},transparent)`,
+      heading: 'Make Robotics The Language Every Indian Student Speaks',
+      body: 'We envision a future where every student — regardless of city, school, or background — has access to world-class hands-on robotics education. Where building a robot is as natural as solving a math problem.',
+      gradientKey: 'orangePink',
+    },
+    {
+      num: '02', label: 'Our Mission', accent: C.purple, topLine: `linear-gradient(90deg,${C.purple},${C.cyan},transparent)`,
+      heading: 'Provide Hands-On Education That Turns Curiosity Into Creation',
+      body: 'We deliver project-based robotics programs where students do not just learn about technology — they build it. Every session ends with something real in your hands and a new skill in your head.',
+      gradientKey: 'purpleCyan',
+    },
+  ],
+  founder: {
+    name: 'Nitin Purohit',
+    title: 'Founder & Head of Education',
+    location: '📍 Bhopal, Madhya Pradesh',
+    quote: 'I watched brilliant students lose interest in engineering because school made it feel like a formula sheet — not a superpower.',
+    quoteBy: '— Arjun Sharma, Founder',
+    credentials: [['🎓','B.E. Electronics, RGPV'], ['⚡','8+ Years in Robotics'], ['🏆','National Robotics Finalist']],
+    story: [
+      'It started with frustration. After graduating from RGPV with an electronics degree, Arjun took a job teaching at a local coaching centre. He had one problem: his students could solve any circuit theory question on paper — but could not wire a simple LED. Something was deeply wrong.',
+      "In 2022, with ₹40,000 in savings, a borrowed soldering iron, and his mother's spare room as a workshop, Arjun started Nimo Labs. The first session had five students. They were 12 and 13 years old. By the end of the day, all five had built a working robot that followed a line across the floor. One of them cried — not because it was hard, but because he'd never believed he could do something like that.",
+      "That moment became the mission. Not certificates. Not exam scores. That look on a student's face when something they built with their own hands actually works.",
+      "Today, Nimo Labs has trained over 500 students across Bhopal. The borrowed soldering iron has been replaced by a full electronics lab. But the mission hasn't changed — make every student feel like the engineer they already are.",
+    ],
+    ctaPrimary: 'Book a Workshop →',
+    ctaSecondary: 'Read Full Story',
+  },
+  timeline: TIMELINE.map(item => ({ ...item })),
+  milestones: MILESTONES.map(item => ({ ...item })),
+  diffRows: DIFF_ROWS.map(item => ({ ...item })),
+  diffCards: DIFF_CARDS.map(item => ({ ...item })),
+  cta: {
+    heading: 'Ready To Build Something Real?',
+    body: 'Join 500+ students who chose to learn by doing — not by memorising.',
+    primary: 'Book a Workshop →',
+    secondary: 'View Programs',
+  },
+})
+
+const gradientMap = {
+  orangePink: gradOrangePink,
+  cyanPurple: gradCyanPurple,
+  purpleCyan: gradPurpleCyan,
+  pinkPurple: gradPinkPurple,
+}
+
+const getGradientByKey = (key) => gradientMap[key] || gradOrangePink
 
 /* ─────────────────────────────────────────────────────────────────
    SHARED LAYOUT ATOMS
@@ -218,8 +283,13 @@ function DiffCard({ c }) {
    MAIN PAGE
 ───────────────────────────────────────────────────────────────── */
 export default function AboutPage() {
+  const { isOwner, getPageContent, savePageContent } = useOwnerAuth()
   const msRef = useRef(null)
   const [msVis, setMsVis] = useState(false)
+  const [aboutContent, setAboutContent] = useState(getDefaultAboutContent)
+  const [editorOpen, setEditorOpen] = useState(false)
+  const [editorText, setEditorText] = useState(JSON.stringify(getDefaultAboutContent(), null, 2))
+  const [editorError, setEditorError] = useState('')
 
   useEffect(() => {
     /* Load fonts */
@@ -242,6 +312,58 @@ export default function AboutPage() {
     obs.observe(el); return () => obs.disconnect()
   }, [])
 
+  useEffect(() => {
+    let active = true
+
+    const loadAboutContent = async () => {
+      try {
+        const entries = await getPageContent('about')
+        const savedEntry = entries.find(entry => entry.key === 'about-page-content')
+        if (!savedEntry || !active) return
+
+        const parsed = typeof savedEntry.content === 'string' ? JSON.parse(savedEntry.content) : savedEntry.content
+        setAboutContent(parsed)
+        setEditorText(JSON.stringify(parsed, null, 2))
+      } catch (error) {
+        console.error('Failed to load about content', error)
+      }
+    }
+
+    loadAboutContent()
+    return () => { active = false }
+  }, [getPageContent])
+
+  const openAboutEditor = () => {
+    setEditorText(JSON.stringify(aboutContent, null, 2))
+    setEditorError('')
+    setEditorOpen(true)
+  }
+
+  const saveAboutContent = async () => {
+    try {
+      const parsed = JSON.parse(editorText)
+      setAboutContent(parsed)
+      if (isOwner) {
+        await savePageContent('about', 'about-page-content', parsed, 'About page content')
+      }
+      setEditorError('')
+      setEditorOpen(false)
+    } catch (error) {
+      setEditorError('Please enter valid JSON before saving.')
+    }
+  }
+
+  const resetAboutContent = async () => {
+    const defaults = getDefaultAboutContent()
+    setAboutContent(defaults)
+    setEditorText(JSON.stringify(defaults, null, 2))
+    setEditorError('')
+    if (isOwner) {
+      await savePageContent('about', 'about-page-content', defaults, 'About page content')
+    }
+    setEditorOpen(false)
+  }
+
   /* shared section wrapper */
   const Sec = ({ children, id }) => (
     <section id={id} style={{ position:'relative', overflow:'hidden', borderBottom:'1px solid rgba(255,255,255,.055)' }}>
@@ -257,26 +379,26 @@ export default function AboutPage() {
 
       {/* ══ 1. HERO ═══════════════════════════════════════════════ */}
       <Sec id="about-hero">
+        {isOwner && (
+          <div style={{ position:'absolute', top:24, right:24, zIndex:3 }}>
+            <button onClick={openAboutEditor} style={{ ...bc, fontSize:9, letterSpacing:'.35em', textTransform:'uppercase', color:'#fff', background:'rgba(255,98,48,.18)', border:'1px solid rgba(255,98,48,.35)', padding:'10px 14px', cursor:'pointer' }}>Edit About Page</button>
+          </div>
+        )}
         {/* Orbit rings */}
         {[500,340,180].map((s,i) => (
           <div key={s} aria-hidden style={{ position:'absolute', borderRadius:'50%', pointerEvents:'none', right:'-80px', top:'50%', transform:'translateY(-50%)', width:s, height:s, border:`1px solid ${i===2?'rgba(255,98,48,.06)':'rgba(255,255,255,.025)'}`, marginLeft:-s/2, marginTop:-s/2 }} />
         ))}
 
         <GhostNum>00</GhostNum>
-        <Eyebrow>Our Story</Eyebrow>
+        <Eyebrow>{aboutContent.hero.eyebrow}</Eyebrow>
 
-        <span style={{ ...bb, fontSize:'clamp(3.2rem,9vw,7.5rem)', letterSpacing:'.025em', display:'block', lineHeight:.88, color:'transparent', WebkitTextStroke:'1px rgba(255,255,255,.25)' }}>BEYOND THE</span>
-        <span style={{ ...bb, ...gradOrangePink, fontSize:'clamp(3.2rem,9vw,7.5rem)', letterSpacing:'.025em', display:'block', lineHeight:.88, filter:'drop-shadow(0 0 30px rgba(255,98,48,.22))' }}>CLASSROOM</span>
-        <p style={{ ...bc, fontSize:'clamp(11px,1.5vw,15px)', letterSpacing:'.2em', textTransform:'uppercase', color:C.cyan, marginTop:10, marginBottom:28 }}>Bhopal's First Hands-On Robotics Education Lab</p>
+        <span style={{ ...bb, fontSize:'clamp(3.2rem,9vw,7.5rem)', letterSpacing:'.025em', display:'block', lineHeight:.88, color:'transparent', WebkitTextStroke:'1px rgba(255,255,255,.25)' }}>{aboutContent.hero.titleLine1}</span>
+        <span style={{ ...bb, ...gradOrangePink, fontSize:'clamp(3.2rem,9vw,7.5rem)', letterSpacing:'.025em', display:'block', lineHeight:.88, filter:'drop-shadow(0 0 30px rgba(255,98,48,.22))' }}>{aboutContent.hero.titleLine2}</span>
+        <p style={{ ...bc, fontSize:'clamp(11px,1.5vw,15px)', letterSpacing:'.2em', textTransform:'uppercase', color:C.cyan, marginTop:10, marginBottom:28 }}>{aboutContent.hero.subtitle}</p>
 
         <div style={{ display:'flex', flexWrap:'wrap', gap:10 }}>
-          {[
-            { dot:C.orange, t:'Est. 2022'              },
-            { dot:C.cyan,   t:'Bhopal, Madhya Pradesh' },
-            { dot:C.purple, t:'500+ Students'          },
-            { dot:C.pink,   t:'20+ Schools'            },
-          ].map(c => (
-            <div key={c.t} style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 16px', border:'1px solid rgba(255,255,255,.08)', background:'rgba(255,255,255,.03)' }}>
+          {aboutContent.hero.highlights.map((c, idx) => (
+            <div key={`${c.t}-${idx}`} style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 16px', border:'1px solid rgba(255,255,255,.08)', background:'rgba(255,255,255,.03)' }}>
               <span style={{ width:5, height:5, borderRadius:'50%', background:c.dot, display:'block', flexShrink:0 }} />
               <span style={{ ...bc, fontSize:9, letterSpacing:'.35em', textTransform:'uppercase', color:'rgba(255,255,255,.42)' }}>{c.t}</span>
             </div>
@@ -290,20 +412,13 @@ export default function AboutPage() {
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:1, background:'rgba(255,255,255,.06)' }}>
 
           {/* Vision */}
-          {[
-            { num:'01', label:'Our Vision', grad:gradOrangePink, accent:C.orange, topLine:`linear-gradient(90deg,${C.orange},${C.pink},transparent)`,
-              heading:'Make Robotics The Language Every Indian Student Speaks',
-              body:"We envision a future where every student — regardless of city, school, or background — has access to world-class hands-on robotics education. Where building a robot is as natural as solving a math problem." },
-            { num:'02', label:'Our Mission', grad:gradPurpleCyan, accent:C.purple, topLine:`linear-gradient(90deg,${C.purple},${C.cyan},transparent)`,
-              heading:'Provide Hands-On Education That Turns Curiosity Into Creation',
-              body:"We deliver project-based robotics programs where students don't just learn about technology — they build it. Every session ends with something real in your hands and a new skill in your head." },
-          ].map((vm,i) => (
+          {aboutContent.visionCards.map((vm) => (
             <div key={vm.num} style={{ position:'relative', padding:'48px 40px', background:C.bg }}>
               <div style={{ position:'absolute', top:0, left:0, right:0, height:'1.5px', background:vm.topLine }} />
               <div style={{ position:'absolute', top:0, left:0, width:20, height:20, borderTop:`1px solid ${vm.accent}`, borderLeft:`1px solid ${vm.accent}` }} />
               <div style={{ ...bb, fontSize:'7rem', lineHeight:1, color:'transparent', WebkitTextStroke:'1px rgba(255,255,255,.04)', userSelect:'none', marginBottom:'-1.5rem' }}>{vm.num}</div>
               <span style={{ ...bc, fontSize:8.5, letterSpacing:'.45em', textTransform:'uppercase', color:'rgba(255,255,255,.28)', display:'block', marginBottom:16 }}>{vm.label}</span>
-              <h3 style={{ ...bb, ...vm.grad, fontSize:'clamp(2rem,3.5vw,3rem)', letterSpacing:'.02em', lineHeight:.92, marginBottom:20 }}>{vm.heading}</h3>
+              <h3 style={{ ...bb, ...getGradientByKey(vm.gradientKey), fontSize:'clamp(2rem,3.5vw,3rem)', letterSpacing:'.02em', lineHeight:.92, marginBottom:20 }}>{vm.heading}</h3>
               <p style={{ ...bar, fontSize:13.5, lineHeight:1.85, color:'rgba(255,255,255,.42)', letterSpacing:'.02em', maxWidth:'46ch' }}>{vm.body}</p>
               <div style={{ width:44, height:'1.5px', marginTop:24, background:`linear-gradient(to right,${vm.accent},transparent)` }} />
             </div>
@@ -338,13 +453,13 @@ export default function AboutPage() {
 
             {/* Name & creds */}
             <div style={{ marginTop:8 }}>
-              <div style={{ ...bb, fontSize:'1.6rem', color:'rgba(255,255,255,.92)', letterSpacing:'.04em', lineHeight:1 }}>Nitin Purohit</div>
-              <div style={{ ...bc, fontSize:9, letterSpacing:'.38em', textTransform:'uppercase', color:C.orange, marginTop:4 }}>Founder & Head of Education</div>
-              <div style={{ ...bc, fontSize:9, letterSpacing:'.28em', textTransform:'uppercase', color:'rgba(255,255,255,.28)', marginTop:6 }}>📍 Bhopal, Madhya Pradesh</div>
+              <div style={{ ...bb, fontSize:'1.6rem', color:'rgba(255,255,255,.92)', letterSpacing:'.04em', lineHeight:1 }}>{aboutContent.founder.name}</div>
+              <div style={{ ...bc, fontSize:9, letterSpacing:'.38em', textTransform:'uppercase', color:C.orange, marginTop:4 }}>{aboutContent.founder.title}</div>
+              <div style={{ ...bc, fontSize:9, letterSpacing:'.28em', textTransform:'uppercase', color:'rgba(255,255,255,.28)', marginTop:6 }}>{aboutContent.founder.location}</div>
             </div>
 
             <div style={{ display:'flex', flexDirection:'column', gap:8, marginTop:20 }}>
-              {[['🎓','B.E. Electronics, RGPV'],['⚡','8+ Years in Robotics'],['🏆','National Robotics Finalist']].map(([ic,lb]) => (
+              {aboutContent.founder.credentials.map(([ic,lb]) => (
                 <div key={lb} style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 12px', border:'1px solid rgba(255,255,255,.07)', background:'rgba(255,255,255,.02)' }}>
                   <span style={{ fontSize:14 }}>{ic}</span>
                   <span style={{ ...bc, fontSize:8, letterSpacing:'.25em', textTransform:'uppercase', color:'rgba(255,255,255,.35)' }}>{lb}</span>
@@ -356,24 +471,19 @@ export default function AboutPage() {
           {/* Story column */}
           <div style={{ flex:1, minWidth:280 }}>
             <blockquote style={{ ...bb, fontSize:'clamp(1.6rem,3vw,2.6rem)', letterSpacing:'.02em', lineHeight:.92, borderLeft:`3px solid ${C.orange}`, paddingLeft:20, marginBottom:8 }}>
-              "I watched brilliant students lose interest in engineering because school made it feel like a formula sheet — not a superpower."
+              "{aboutContent.founder.quote}"
             </blockquote>
-            <cite style={{ ...bc, fontSize:9, letterSpacing:'.38em', textTransform:'uppercase', color:C.orange, paddingLeft:20, display:'block', marginBottom:28 }}>— Arjun Sharma, Founder</cite>
+            <cite style={{ ...bc, fontSize:9, letterSpacing:'.38em', textTransform:'uppercase', color:C.orange, paddingLeft:20, display:'block', marginBottom:28 }}>{aboutContent.founder.quoteBy}</cite>
 
             <GradRule />
 
-            {[
-              "It started with frustration. After graduating from RGPV with an electronics degree, Arjun took a job teaching at a local coaching centre. He had one problem: his students could solve any circuit theory question on paper — but couldn't wire a simple LED. Something was deeply wrong.",
-              "In 2022, with ₹40,000 in savings, a borrowed soldering iron, and his mother's spare room as a workshop, Arjun started Nimo Labs. The first session had five students. They were 12 and 13 years old. By the end of the day, all five had built a working robot that followed a line across the floor. One of them cried — not because it was hard, but because he'd never believed he could do something like that.",
-              "That moment became the mission. Not certificates. Not exam scores. That look on a student's face when something they built with their own hands actually works.",
-              "Today, Nimo Labs has trained over 500 students across Bhopal. The borrowed soldering iron has been replaced by a full electronics lab. But the mission hasn't changed — make every student feel like the engineer they already are.",
-            ].map((p,i) => (
+            {aboutContent.founder.story.map((p,i) => (
               <p key={i} style={{ ...bar, fontSize:14, lineHeight:1.88, color:'rgba(255,255,255,.45)', letterSpacing:'.02em', marginBottom:16 }}>{p}</p>
             ))}
 
             <div style={{ display:'flex', gap:12, marginTop:28, flexWrap:'wrap' }}>
-              <BtnPrimary>Book a Workshop →</BtnPrimary>
-              <BtnGhost>Read Full Story</BtnGhost>
+              <BtnPrimary>{aboutContent.founder.ctaPrimary}</BtnPrimary>
+              <BtnGhost>{aboutContent.founder.ctaSecondary}</BtnGhost>
             </div>
           </div>
         </div>
@@ -386,8 +496,8 @@ export default function AboutPage() {
           {/* Spine */}
           <div style={{ position:'absolute', left:0, top:0, bottom:0, width:1, background:`linear-gradient(to bottom,${C.orange},${C.pink},${C.purple},rgba(255,255,255,.06))` }} />
 
-          {TIMELINE.map((m,i) => (
-            <div key={m.year} style={{ position:'relative', paddingLeft:40, paddingBottom: i < TIMELINE.length-1 ? 52 : 0 }}>
+          {aboutContent.timeline.map((m,i) => (
+            <div key={`${m.year}-${i}`} style={{ position:'relative', paddingLeft:40, paddingBottom: i < aboutContent.timeline.length-1 ? 52 : 0 }}>
               {/* Dot */}
               <div style={{ position:'absolute', left:'-44px', top:6, width:10, height:10, borderRadius:'50%', border:`2px solid ${m.accentColor}`, background:`${m.accentColor}30`, boxShadow:`0 0 8px ${m.accentColor}60`, zIndex:1 }} />
 
@@ -409,7 +519,7 @@ export default function AboutPage() {
         <Sec id="about-milestones">
           <SectionLabel text="Milestones" />
           <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:1, background:'rgba(255,255,255,.06)' }}>
-            {MILESTONES.map(m => <MilestoneCard key={m.label} m={m} visible={msVis} />)}
+            {aboutContent.milestones.map(m => <MilestoneCard key={m.label} m={m} visible={msVis} />)}
           </div>
         </Sec>
       </div>
@@ -437,7 +547,7 @@ export default function AboutPage() {
                 </tr>
               </thead>
               <tbody>
-                {DIFF_ROWS.map((r,i) => (
+                {aboutContent.diffRows.map((r,i) => (
                   <tr key={r.feat}>
                     <td style={{ ...bc, padding:'14px 20px', border:'1px solid rgba(255,255,255,.06)', fontSize:8.5, letterSpacing:'.3em', textTransform:'uppercase', color:'rgba(255,255,255,.28)', background:'rgba(255,255,255,.02)' }}>{r.feat}</td>
                     <td style={{ ...bar, padding:'14px 20px', border:'1px solid rgba(255,255,255,.06)', fontSize:12.5, color:'rgba(255,255,255,.3)', lineHeight:1.6, letterSpacing:'.02em' }}>{r.trad}</td>
@@ -452,7 +562,7 @@ export default function AboutPage() {
 
           {/* Differentiator cards */}
           <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:14, marginBottom:52 }}>
-            {DIFF_CARDS.map(c => <DiffCard key={c.title} c={c} />)}
+            {aboutContent.diffCards.map(c => <DiffCard key={c.title} c={c} />)}
           </div>
 
           {/* Final CTA */}
@@ -461,16 +571,46 @@ export default function AboutPage() {
             <div style={{ position:'absolute', top:0, left:0, width:22, height:22, borderTop:`2px solid ${C.orange}`, borderLeft:`2px solid ${C.orange}` }} />
             <div style={{ position:'absolute', bottom:0, right:0, width:22, height:22, borderBottom:'2px solid rgba(139,49,232,.5)', borderRight:'2px solid rgba(139,49,232,.5)' }} />
             <div>
-              <span style={{ ...bb, ...gradOrangePink, fontSize:'clamp(2rem,4vw,3.2rem)', letterSpacing:'.03em', lineHeight:.92, display:'block', marginBottom:8 }}>Ready To Build Something Real?</span>
-              <span style={{ ...bar, fontSize:13.5, color:'rgba(255,255,255,.38)', letterSpacing:'.02em' }}>Join 500+ students who chose to learn by doing — not by memorising.</span>
+              <span style={{ ...bb, ...gradOrangePink, fontSize:'clamp(2rem,4vw,3.2rem)', letterSpacing:'.03em', lineHeight:.92, display:'block', marginBottom:8 }}>{aboutContent.cta.heading}</span>
+              <span style={{ ...bar, fontSize:13.5, color:'rgba(255,255,255,.38)', letterSpacing:'.02em' }}>{aboutContent.cta.body}</span>
             </div>
             <div style={{ display:'flex', gap:12, flexWrap:'wrap', flexShrink:0 }}>
-              <BtnPrimary>Book a Workshop →</BtnPrimary>
-              <BtnGhost>View Programs</BtnGhost>
+              <BtnPrimary>{aboutContent.cta.primary}</BtnPrimary>
+              <BtnGhost>{aboutContent.cta.secondary}</BtnGhost>
             </div>
           </div>
         </div>
       </section>
+
+      {editorOpen && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(2,2,3,.85)', zIndex:60, display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}>
+          <div style={{ width:'min(960px, 100%)', maxHeight:'90vh', overflowY:'auto', background:'#0e0e11', border:'1px solid rgba(255,255,255,.12)', boxShadow:'0 24px 80px rgba(0,0,0,.45)', padding:24 }}>
+            <div style={{ display:'flex', justifyContent:'space-between', gap:16, alignItems:'flex-start', marginBottom:20 }}>
+              <div>
+                <div style={{ ...bb, fontSize:'1.5rem', letterSpacing:'.04em', color:C.orange }}>Owner Content Editor</div>
+                <div style={{ ...bar, marginTop:6, fontSize:13, color:'rgba(255,255,255,.45)' }}>Edit the About page copy and structure directly from the site.</div>
+              </div>
+              <button onClick={() => setEditorOpen(false)} style={{ ...bc, fontSize:9, letterSpacing:'.35em', textTransform:'uppercase', color:'rgba(255,255,255,.7)', background:'rgba(255,255,255,.06)', border:'1px solid rgba(255,255,255,.12)', padding:'10px 14px', cursor:'pointer' }}>Close</button>
+            </div>
+
+            <label style={{ ...bc, display:'block', fontSize:10, letterSpacing:'.35em', textTransform:'uppercase', color:'rgba(255,255,255,.42)', marginBottom:8 }}>About Page JSON</label>
+            <textarea
+              value={editorText}
+              onChange={(event) => {
+                setEditorText(event.target.value)
+                setEditorError('')
+              }}
+              style={{ width:'100%', minHeight:380, resize:'vertical', background:'#050506', color:'#f4f4f5', border:'1px solid rgba(255,255,255,.12)', padding:14, fontFamily:'Consolas, monospace', fontSize:12, lineHeight:1.5, outline:'none' }}
+            />
+            {editorError && <div style={{ ...bar, marginTop:10, color:'#ff8d6d', fontSize:13 }}>{editorError}</div>}
+
+            <div style={{ display:'flex', justifyContent:'flex-end', gap:12, marginTop:18 }}>
+              <button onClick={resetAboutContent} style={{ ...bc, fontSize:9, letterSpacing:'.35em', textTransform:'uppercase', color:'rgba(255,255,255,.7)', background:'rgba(255,255,255,.04)', border:'1px solid rgba(255,255,255,.12)', padding:'12px 16px', cursor:'pointer' }}>Reset</button>
+              <button onClick={saveAboutContent} style={{ ...bc, fontSize:9, letterSpacing:'.35em', textTransform:'uppercase', color:'#fff', background:C.orange, border:'none', padding:'12px 18px', cursor:'pointer', boxShadow:'0 0 24px rgba(255,98,48,.25)' }}>Save</button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   )
