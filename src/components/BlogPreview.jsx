@@ -294,6 +294,42 @@ export default function BlogPreview() {
   const { getCards } = useOwnerAuth()
   const [posts, setPosts] = useState(fallbackPosts)
   const [loadingPosts, setLoadingPosts] = useState(true)
+  const [email, setEmail] = useState('')
+  const [status, setStatus] = useState('idle')
+  const [message, setMessage] = useState('')
+
+  const handleSubscribe = async (e) => {
+    e.preventDefault()
+    if (!email.trim()) {
+      setStatus('error')
+      setMessage('Please enter your email address.')
+      return
+    }
+
+    setStatus('loading')
+    setMessage('')
+
+    try {
+      const response = await fetch('/api/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Subscription failed.')
+      }
+
+      setStatus('success')
+      setMessage(data.message || 'You’re subscribed!')
+      setEmail('')
+    } catch (error) {
+      setStatus('error')
+      setMessage(error.message || 'Something went wrong. Please try again.')
+    }
+  }
 
   useEffect(() => {
     let active = true
@@ -427,20 +463,41 @@ export default function BlogPreview() {
               <p className="text-[11px] font-light text-[#F0EAD6]/40 mb-3 leading-[1.65]" style={dmSans}>
                 Tutorials, project walkthroughs, and lab updates — straight to your inbox.
               </p>
-              <div className="flex gap-0">
-                <input
-                  type="email"
-                  placeholder="your@email.com"
-                  className="flex-1 bg-white/[.03] border border-white/[.09] border-r-0 px-3 py-2 text-[#F0EAD6] text-[11px] outline-none focus:border-[#FF6B35]/50 placeholder:text-[#F0EAD6]/20 transition-colors"
-                  style={dmSans}
-                />
-                <button
-                  className="text-[8px] font-bold tracking-[.28em] uppercase text-white bg-[#FF6B35] px-4 py-2 border-none cursor-pointer transition-all hover:bg-[#ff8040]"
-                  style={syne}
-                >
-                  Sub
-                </button>
-              </div>
+              <form onSubmit={handleSubscribe} className="flex flex-col gap-2">
+                <div className="flex gap-0">
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => {
+                      setEmail(e.target.value)
+                      if (status !== 'idle') setStatus('idle')
+                    }}
+                    placeholder="your@email.com"
+                    className="flex-1 bg-white/[.03] border border-white/[.09] border-r-0 px-3 py-2 text-[#F0EAD6] text-[11px] outline-none focus:border-[#FF6B35]/50 placeholder:text-[#F0EAD6]/20 transition-colors"
+                    style={dmSans}
+                  />
+                  <button
+                    type="submit"
+                    className="text-[8px] font-bold tracking-[.28em] uppercase text-white bg-[#FF6B35] px-4 py-2 border-none cursor-pointer transition-all hover:bg-[#ff8040]"
+                    style={syne}
+                  >
+                    {status === 'loading' ? 'Wait' : 'Sub'}
+                  </button>
+                </div>
+                {message ? (
+                  <div
+                    className="rounded border px-2.5 py-2 text-[10px]"
+                    style={{
+                      background: status === 'success' ? 'rgba(124,255,178,0.12)' : 'rgba(255,155,123,0.12)',
+                      borderColor: status === 'success' ? 'rgba(124,255,178,0.25)' : 'rgba(255,155,123,0.25)',
+                      color: status === 'success' ? '#7CFFB2' : '#ff9b7b',
+                      animation: 'fadeInUp 0.35s ease-out',
+                    }}
+                  >
+                    {message}
+                  </div>
+                ) : null}
+              </form>
             </div>
           </div>
         </div>
