@@ -26,4 +26,7 @@ router.use('/cards', require('./cards'))
 // Contact form routes
 router.use('/contact', require('./contact'))
 
+// Newsletter subscription routes
+router.use('/subscribe', require('./subscribe'))
+
 module.exports = router
