@@ -247,7 +247,7 @@ export default function PartnersStrip() {
             }}
           >
             {[...displayPartners, ...displayPartners].map((partner, i) => (
-              <PartnerChip key={`r1-${partner.id || i}`} partner={partner} isOwner={isOwner} onEdit={startEdit} onDelete={deletePartner} />
+              <PartnerChip key={`r1-${partner.id || 'partner'}-${i}`} partner={partner} isOwner={isOwner} onEdit={startEdit} onDelete={deletePartner} />
             ))}
           </div>
         </div>
@@ -262,7 +262,7 @@ export default function PartnersStrip() {
             }}
           >
             {[...row2, ...row2].map((partner, i) => (
-              <PartnerChip key={`r2-${partner.id || i}`} partner={partner} isOwner={isOwner} onEdit={startEdit} onDelete={deletePartner} />
+              <PartnerChip key={`r2-${partner.id || 'partner'}-${i}`} partner={partner} isOwner={isOwner} onEdit={startEdit} onDelete={deletePartner} />
             ))}
           </div>
         </div>
