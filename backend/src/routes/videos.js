@@ -1,13 +1,26 @@
 const express = require('express')
+const fs = require('fs')
+const path = require('path')
 const router = express.Router()
 const multer = require('multer')
 const videoController = require('../controllers/videoController')
 const { protectOwner } = require('../middleware/ownerAuth')
 
+const uploadDir = path.join(__dirname, '../../public/uploads')
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true })
+}
+
 // Configure multer for file uploads
-const storage = multer.memoryStorage()
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, uploadDir),
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname) || '.mp4'
+    cb(null, `${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`)
+  },
+})
 const upload = multer({
-  storage: storage,
+  storage,
   fileFilter: (req, file, cb) => {
     // Only allow video files
     if (file.mimetype.startsWith('video/')) {
