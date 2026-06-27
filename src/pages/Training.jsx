@@ -58,7 +58,7 @@ function StatBox({ num, label, color, numId, labelId }) {
   );
 }
 
-function ModalField({ label, type = "text", placeholder }) {
+function ModalField({ label, type = "text", placeholder, value, onChange }) {
   return (
     <div className="mb-3.5">
       <label className="block text-[8px] font-bold tracking-[.32em] uppercase text-[#F0EAD6]/35 mb-1.5" style={syne}>
@@ -66,6 +66,8 @@ function ModalField({ label, type = "text", placeholder }) {
       </label>
       <input
         type={type}
+        value={value}
+        onChange={onChange}
         placeholder={placeholder}
         className="w-full bg-white/[.035] border border-white/[.09] text-[#F0EAD6] px-3 py-2.5 text-[13px] font-light outline-none focus:border-[#FF6B35]/40 transition-colors placeholder:text-[#F0EAD6]/20"
         style={dmSans}
@@ -348,6 +350,9 @@ export default function TrainingPage() {
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState("all")
   const [enrollModal, setEnrollModal] = useState({ open: false, courseName: "" })
+  const [enrollForm, setEnrollForm] = useState({ name: "", email: "", phone: "", experience: "Complete Beginner" })
+  const [enrollError, setEnrollError] = useState("")
+  const [submittingEnroll, setSubmittingEnroll] = useState(false)
   const [successModal, setSuccessModal] = useState(false)
   const [ctaModal, setCtaModal] = useState(false)
 
@@ -383,9 +388,55 @@ export default function TrainingPage() {
   }, [])
 
   const filtered = filter === "all" ? courses : courses.filter((c) => c.category === filter)
-  const openEnroll = (name) => setEnrollModal({ open: true, courseName: name })
-  const closeEnroll = () => setEnrollModal({ open: false, courseName: "" })
-  const submitEnroll = () => {closeEnroll(); setTimeout(() => setSuccessModal(true), 200)}
+  const openEnroll = (name) => {
+    setEnrollModal({ open: true, courseName: name })
+    setEnrollForm({ name: "", email: "", phone: "", experience: "Complete Beginner" })
+    setEnrollError("")
+    setSubmittingEnroll(false)
+  }
+
+  const closeEnroll = () => {
+    setEnrollModal({ open: false, courseName: "" })
+    setEnrollError("")
+    setSubmittingEnroll(false)
+  }
+
+  const submitEnroll = async () => {
+    if (!enrollForm.name.trim() || !enrollForm.email.trim() || !enrollForm.phone.trim()) {
+      setEnrollError("Please enter your name, email, and phone number.")
+      return
+    }
+
+    setSubmittingEnroll(true)
+    setEnrollError("")
+
+    try {
+      const response = await fetch(`${API_URL}/contact`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "Course Enrollment",
+          name: enrollForm.name,
+          email: enrollForm.email,
+          phone: enrollForm.phone,
+          service: enrollModal.courseName,
+          message: `Experience level: ${enrollForm.experience}`,
+        }),
+      })
+
+      const data = await response.json()
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || "Enrollment request failed.")
+      }
+
+      closeEnroll()
+      setTimeout(() => setSuccessModal(true), 200)
+    } catch (error) {
+      setEnrollError(error.message || "We could not submit your enrollment right now. Please try again.")
+    } finally {
+      setSubmittingEnroll(false)
+    }
+  }
 
   return (
     <div className="min-h-screen bg-[#050508] text-[#F0EAD6]" style={dmSans}>
@@ -595,29 +646,58 @@ export default function TrainingPage() {
             Register your interest and we'll send you the full schedule, syllabus,
             and payment details within 24 hours.
           </p>
-          <ModalField label="Full Name"  type="text"  placeholder="Your full name" />
+          <ModalField
+            label="Full Name"
+            type="text"
+            placeholder="Your full name"
+            value={enrollForm.name}
+            onChange={(e) => setEnrollForm((prev) => ({ ...prev, name: e.target.value }))}
+          />
           <div className="grid grid-cols-2 gap-3">
-            <ModalField label="Email" type="email" placeholder="you@email.com" />
-            <ModalField label="Phone" type="tel"   placeholder="+91 XXXXX XXXXX" />
+            <ModalField
+              label="Email"
+              type="email"
+              placeholder="you@email.com"
+              value={enrollForm.email}
+              onChange={(e) => setEnrollForm((prev) => ({ ...prev, email: e.target.value }))}
+            />
+            <ModalField
+              label="Phone"
+              type="tel"
+              placeholder="+91 XXXXX XXXXX"
+              value={enrollForm.phone}
+              onChange={(e) => setEnrollForm((prev) => ({ ...prev, phone: e.target.value }))}
+            />
           </div>
           <div className="mb-3.5">
             <label className="block text-[8px] font-bold tracking-[.32em] uppercase text-[#F0EAD6]/35 mb-1.5" style={syne}>
               Experience Level
             </label>
-            <select className="w-full bg-white/[.035] border border-white/[.09] text-[#F0EAD6] px-3 py-2.5 text-[13px] font-light outline-none focus:border-[#FF6B35]/40 transition-colors" style={dmSans}>
+            <select
+              value={enrollForm.experience}
+              onChange={(e) => setEnrollForm((prev) => ({ ...prev, experience: e.target.value }))}
+              className="w-full bg-white/[.035] border border-white/[.09] text-[#F0EAD6] px-3 py-2.5 text-[13px] font-light outline-none focus:border-[#FF6B35]/40 transition-colors"
+              style={dmSans}
+            >
               <option>Complete Beginner</option>
               <option>Some Experience</option>
               <option>Intermediate</option>
               <option>Advanced</option>
             </select>
           </div>
+          {enrollError ? (
+            <div className="mb-3 rounded border border-[#FF6B35]/30 bg-[#FF6B35]/[.08] px-3 py-2 text-[11px] text-[#ffb08a]" style={dmSans}>
+              {enrollError}
+            </div>
+          ) : null}
           <div className="flex gap-2.5 mt-5">
             <button
               className="flex-1 text-[10px] font-bold tracking-[.28em] uppercase bg-[#FF6B35] text-white border-none py-3.5 cursor-pointer hover:bg-[#ff8040] hover:shadow-[0_0_28px_rgba(255,107,53,.4)] transition-all duration-300"
               style={syne}
               onClick={submitEnroll}
+              disabled={submittingEnroll}
             >
-              Enroll Now
+              {submittingEnroll ? "Submitting..." : "Enroll Now"}
             </button>
             <button
               className="text-[10px] font-semibold tracking-[.28em] uppercase bg-transparent border border-white/10 text-[#F0EAD6]/40 px-5 py-3.5 cursor-pointer hover:border-white/20 hover:text-[#F0EAD6]/65 transition-all duration-200"

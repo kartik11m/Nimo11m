@@ -19,6 +19,7 @@ const labOptions = [
 const institutionTypes = ['School', 'Junior College', 'Degree College', 'University', 'Government Body', 'Private Organization', 'Education Group', 'Other']
 const budgetRanges     = ['< ₹8 Lakhs', '₹8–15 Lakhs', '₹15–35 Lakhs', '₹35–75 Lakhs', '₹75 Lakhs+', 'Need Guidance']
 const timelines        = ['ASAP (1–2 months)', '3–6 months', '6–12 months', 'Next academic year', 'Just exploring']
+const API_BASE          = import.meta.env.VITE_API_URL || '/api'
 
 // ── Styled select ──────────────────────────────────────────────────
 function StyledSelect({ label, value, onChange, options, required }) {
@@ -148,7 +149,7 @@ export default function LabSetupEnquirePage() {
     setError('')
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/contact`, {
+      const response = await fetch(`${API_BASE}/contact`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
