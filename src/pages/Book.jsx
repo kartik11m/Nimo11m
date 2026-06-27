@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 const bebasNeue = { fontFamily: "'Bebas Neue', sans-serif" };
 const syne      = { fontFamily: "'Syne', sans-serif" };
@@ -10,6 +10,16 @@ const infoCards = [
 ];
 
 export default function Book() {
+  const [form, setForm] = useState({
+    name: '',
+    email: '',
+    organization: '',
+    program: 'Arduino Workshop',
+    message: '',
+  })
+  const [submitState, setSubmitState] = useState('idle')
+  const [error, setError] = useState('')
+
   useEffect(() => {
     const link = document.createElement("link");
     link.rel  = "stylesheet";
@@ -40,6 +50,46 @@ export default function Book() {
   const handleBlur = (e) => {
     e.target.style.borderColor = "rgba(255,255,255,.1)";
     e.target.style.boxShadow   = "none";
+  };
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!form.name || !form.email || !form.message) return;
+
+    setSubmitState('sending');
+    setError('');
+
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/contact`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'Workshop booking',
+          name: form.name,
+          email: form.email,
+          organization: form.organization,
+          preferredProgram: form.program,
+          message: form.message,
+          subject: 'Workshop booking',
+        }),
+      });
+
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || 'We could not submit your booking request.');
+      }
+
+      setSubmitState('done');
+      setForm({ name: '', email: '', organization: '', program: 'Arduino Workshop', message: '' });
+    } catch (err) {
+      setSubmitState('idle');
+      setError(err.message || 'We could not submit your booking request.');
+    }
   };
 
   return (
@@ -205,7 +255,7 @@ export default function Book() {
               </div>
 
               {/* Form */}
-              <div className="grid gap-5">
+              <form className="grid gap-5" onSubmit={handleSubmit}>
 
                 {/* Name */}
                 <label>
@@ -216,6 +266,9 @@ export default function Book() {
                     Your Name
                   </span>
                   <input
+                    name="name"
+                    value={form.name}
+                    onChange={handleChange}
                     style={inputClass}
                     placeholder="Ayesha"
                     onFocus={handleFocus}
@@ -233,6 +286,9 @@ export default function Book() {
                   </span>
                   <input
                     type="email"
+                    name="email"
+                    value={form.email}
+                    onChange={handleChange}
                     style={inputClass}
                     placeholder="hello@example.com"
                     onFocus={handleFocus}
@@ -249,6 +305,9 @@ export default function Book() {
                     Organization
                   </span>
                   <input
+                    name="organization"
+                    value={form.organization}
+                    onChange={handleChange}
                     style={inputClass}
                     placeholder="School / College"
                     onFocus={handleFocus}
@@ -265,6 +324,9 @@ export default function Book() {
                     Preferred Program
                   </span>
                   <select
+                    name="program"
+                    value={form.program}
+                    onChange={handleChange}
                     style={{ ...inputClass, cursor: "pointer" }}
                     onFocus={handleFocus}
                     onBlur={handleBlur}
@@ -285,6 +347,9 @@ export default function Book() {
                     Message / Event Details
                   </span>
                   <textarea
+                    name="message"
+                    value={form.message}
+                    onChange={handleChange}
                     rows={5}
                     style={{ ...inputClass, resize: "none" }}
                     placeholder="Tell us the grade, dates, expected number of students, and location."
@@ -294,6 +359,10 @@ export default function Book() {
                 </label>
 
                 {/* Submit */}
+                {error && (
+                  <p style={{ ...dmSans, fontSize: 12, color: '#ff9b7a' }}>{error}</p>
+                )}
+
                 <button
                   type="submit"
                   className="
@@ -304,10 +373,11 @@ export default function Book() {
                     transition-all duration-300
                   "
                   style={syne}
+                  disabled={submitState === 'sending'}
                 >
-                  Submit Request
+                  {submitState === 'sending' ? 'Submitting...' : submitState === 'done' ? 'Request Sent ✓' : 'Submit Request'}
                 </button>
-              </div>
+              </form>
             </div>
 
           </div>
