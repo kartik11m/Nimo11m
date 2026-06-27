@@ -1,12 +1,12 @@
-import { createContext, useContext, useState, useEffect } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback } from 'react'
 
 const OwnerAuthContext = createContext()
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
 export function OwnerAuthProvider({ children }) {
-  const [isOwner, setIsOwner] = useState(false)
-  const [token, setToken] = useState(null)
+  const [isOwner, setIsOwner] = useState(() => Boolean(localStorage.getItem('ownerToken')))
+  const [token, setToken] = useState(() => localStorage.getItem('ownerToken'))
   const [loading, setLoading] = useState(true)
 
   // Initialize from localStorage
@@ -50,7 +50,7 @@ export function OwnerAuthProvider({ children }) {
     localStorage.removeItem('ownerToken')
   }
 
-  const updateContent = async (contentId, content) => {
+  const updateContent = useCallback(async (contentId, content) => {
     try {
       const res = await fetch(`${API_URL}/content/${contentId}`, {
         method: 'PUT',
@@ -68,9 +68,9 @@ export function OwnerAuthProvider({ children }) {
       console.error('Update failed:', error)
       throw error
     }
-  }
+  }, [token])
 
-  const getPageContent = async (page) => {
+  const getPageContent = useCallback(async (page) => {
     try {
       const res = await fetch(`${API_URL}/content/${page}`, {
         headers: { 'Content-Type': 'application/json' },
@@ -83,9 +83,9 @@ export function OwnerAuthProvider({ children }) {
       console.error('Fetch page content failed:', error)
       throw error
     }
-  }
+  }, [])
 
-  const savePageContent = async (page, key, value, label = key) => {
+  const savePageContent = useCallback(async (page, key, value, label = key) => {
     try {
       const res = await fetch(`${API_URL}/content/${key}`, {
         method: 'PUT',
@@ -103,7 +103,7 @@ export function OwnerAuthProvider({ children }) {
       console.error('Save page content failed:', error)
       throw error
     }
-  }
+  }, [token])
 
   // ── CARD MANAGEMENT FUNCTIONS ──────────────────────────────
   const getCards = async (cardType, page = 'achievements') => {
