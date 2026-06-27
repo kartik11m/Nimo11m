@@ -134,6 +134,7 @@ export default function LabSetupEnquirePage() {
   const [timeline,        setTimeline]        = useState('')
   const [notes,           setNotes]           = useState('')
   const [submitState,     setSubmitState]     = useState('idle') // idle | sending | done
+  const [error,           setError]           = useState('')
 
   const toggleLab = (id) =>
     setSelectedLabs(prev => prev.includes(id) ? prev.filter(l => l !== id) : [...prev, id])
@@ -141,10 +142,44 @@ export default function LabSetupEnquirePage() {
   const canSubmit = institutionName && institutionType && city && contactName &&
                     contactEmail && contactPhone && selectedLabs.length > 0 && budget && timeline
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!canSubmit) return
     setSubmitState('sending')
-    setTimeout(() => setSubmitState('done'), 2000)
+    setError('')
+
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/contact`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'Lab setup enquiry',
+          name: contactName,
+          email: contactEmail,
+          phone: contactPhone,
+          institutionName,
+          institutionType,
+          city,
+          designation,
+          selectedLabs,
+          students,
+          area,
+          budget,
+          timeline,
+          notes,
+          message: `Lab setup enquiry for ${institutionName || 'an institution'}`,
+        }),
+      })
+
+      const data = await response.json()
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || 'We could not submit your proposal request right now.')
+      }
+
+      setSubmitState('done')
+    } catch (err) {
+      setSubmitState('idle')
+      setError(err.message || 'We could not submit your proposal request right now.')
+    }
   }
 
   return (
@@ -442,6 +477,9 @@ export default function LabSetupEnquirePage() {
                     >
                       {submitState === 'sending' ? 'Submitting Enquiry...' : 'Submit Proposal Request →'}
                     </button>
+                    {error && (
+                      <p className="text-[10px] font-light text-[#FF9B7A] text-center mt-2 leading-[1.6]" style={dmSans}>{error}</p>
+                    )}
                     <p className="text-[10px] font-light text-[#F0EAD6]/20 text-center mt-3 leading-[1.6]" style={dmSans}>
                       By submitting you agree to be contacted by our Lab Setup team. No spam — ever.
                     </p>
