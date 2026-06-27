@@ -297,6 +297,7 @@ export default function ContactPageV2() {
   const [form,      setForm]      = useState({ name:'', email:'', phone:'', service:'', school:'', students:'', message:'' })
   const [submitted, setSubmitted] = useState(false)
   const [sending,   setSending]   = useState(false)
+  const [error,     setError]     = useState('')
   const [openFaq,   setOpenFaq]   = useState(null)
 
   /* FIX: removed useEffect font/style injection entirely.
@@ -308,14 +309,42 @@ export default function ContactPageV2() {
   const handleSubmit = async e => {
     e.preventDefault()
     setSending(true)
-    await new Promise(r => setTimeout(r, 1800))
-    setSending(false)
-    setSubmitted(true)
+    setError('')
+
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/contact`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'Contact enquiry',
+          name: form.name,
+          email: form.email,
+          phone: form.phone,
+          service: form.service,
+          school: form.school,
+          students: form.students,
+          message: form.message,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || 'We could not send your message right now.')
+      }
+
+      setSubmitted(true)
+    } catch (err) {
+      setError(err.message || 'We could not send your message right now.')
+    } finally {
+      setSending(false)
+    }
   }
 
   const resetForm = () => {
     setSubmitted(false)
     setSending(false)
+    setError('')
     setForm({ name:'', email:'', phone:'', service:'', school:'', students:'', message:'' })
   }
 
@@ -437,6 +466,10 @@ export default function ContactPageV2() {
                     <p style={{ ...bar, fontSize:11, color:'rgba(255,255,255,.22)', lineHeight:1.7, letterSpacing:'.02em' }}>
                       Your information is kept private and never shared. We use it only to respond to your enquiry.
                     </p>
+
+                    {error && (
+                      <p style={{ ...bar, fontSize:12, color:'#ff9b7a', marginTop:4 }}>{error}</p>
+                    )}
 
                     <button type="submit" disabled={sending}
                       style={{ ...bc, fontSize:9, letterSpacing:'.42em', textTransform:'uppercase', color:'#fff', background:sending?'rgba(255,98,48,.5)':C.o, border:'none', padding:14, cursor:sending?'not-allowed':'pointer', boxShadow:sending?'none':'0 0 22px rgba(255,98,48,.28)', transition:'background .3s, box-shadow .3s' }}>
