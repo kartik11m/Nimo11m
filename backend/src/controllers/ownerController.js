@@ -1,4 +1,5 @@
 const Owner = require('../models/Owner')
+const { signOwnerToken } = require('../utils/authToken')
 
 exports.register = async (req, res) => {
   try {
@@ -29,11 +30,7 @@ exports.register = async (req, res) => {
     })
 
     // Create JWT token
-    const token = require('jsonwebtoken').sign(
-      { id: owner._id },
-      process.env.JWT_SECRET || 'your-secret-key',
-      { expiresIn: '7d' }
-    )
+    const token = signOwnerToken({ id: owner._id })
 
     res.status(201).json({
       success: true,
@@ -64,11 +61,7 @@ exports.login = async (req, res) => {
     }
 
     // Create JWT token
-    const token = require('jsonwebtoken').sign(
-      { id: owner._id },
-      process.env.JWT_SECRET || 'your-secret-key',
-      { expiresIn: '7d' }
-    )
+    const token = signOwnerToken({ id: owner._id })
 
     res.status(200).json({
       success: true,
