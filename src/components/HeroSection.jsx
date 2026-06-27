@@ -8,6 +8,13 @@ gsap.registerPlugin(ScrollTrigger)
 const DEFAULT_HERO_VIDEO = '/videos/nimo 2 draft..mp4'
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
+const normalizeToken = (value) => {
+  if (typeof value !== 'string') return ''
+  const trimmed = value.trim()
+  if (!trimmed) return ''
+  return trimmed.replace(/^Bearer\s+/i, '')
+}
+
 const getMediaBaseUrl = () => {
   const configuredBase = API_URL.replace(/\/api\/?$/, '')
   if (configuredBase && configuredBase !== API_URL) return configuredBase
@@ -127,7 +134,8 @@ export default function HeroSection() {
       formData.append('video', file)
       formData.append('sectionId', 'home')
 
-      const headers = token ? { Authorization: `Bearer ${token}` } : {}
+      const authToken = normalizeToken(token)
+      const headers = authToken ? { Authorization: `Bearer ${authToken}` } : {}
       const res = await fetch(`${API_URL}/videos/upload`, {
         method: 'POST',
         headers,
