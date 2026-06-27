@@ -1,4 +1,4 @@
-const jwt = require('jsonwebtoken')
+const { verifyOwnerToken } = require('../utils/authToken')
 
 exports.protectOwner = (req, res, next) => {
   try {
@@ -12,7 +12,7 @@ exports.protectOwner = (req, res, next) => {
       return res.status(401).json({ success: false, message: 'Not authorized' })
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key')
+    const decoded = verifyOwnerToken(token)
     req.owner = decoded
     next()
   } catch (error) {
