@@ -230,14 +230,39 @@ export default function ContactSection() {
   const [message,     setMessage]     = useState('')
   const [subject,     setSubject]     = useState(null)   // index of subjects[]
   const [submitState, setSubmitState] = useState('idle') // idle | sending | done
+  const [error,       setError]       = useState('')
 
   const typedPlaceholder = useTypedPlaceholder(messagePlaceholders)
   const activeSubject    = subject !== null ? subjects[subject] : subjects[0]
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!name || !email || !message) return
     setSubmitState('sending')
-    setTimeout(() => setSubmitState('done'), 1800)
+    setError('')
+
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/contact`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: activeSubject?.label || 'General Query',
+          name,
+          email,
+          message,
+          subject: activeSubject?.label || 'General Query',
+        }),
+      })
+
+      const data = await response.json()
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || 'We could not send your message right now.')
+      }
+
+      setSubmitState('done')
+    } catch (err) {
+      setSubmitState('idle')
+      setError(err.message || 'We could not send your message right now.')
+    }
   }
 
   const canSubmit = name.trim() && email.trim() && message.trim()
@@ -539,6 +564,10 @@ export default function ContactSection() {
                       onClick={canSubmit ? handleSubmit : undefined}
                     />
                   </div>
+
+                  {error && (
+                    <p className="text-[10px] font-light text-[#FF9B7A] text-center leading-[1.6]" style={dmSans}>{error}</p>
+                  )}
 
                   {/* Privacy note */}
                   <p className="text-[10px] font-light text-[#F0EAD6]/20 text-center leading-[1.6]" style={dmSans}>
