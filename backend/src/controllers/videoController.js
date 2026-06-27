@@ -1,3 +1,5 @@
+const fs = require('fs')
+const path = require('path')
 const Video = require('../models/Video')
 
 // Get all videos
@@ -162,31 +164,38 @@ exports.uploadVideo = async (req, res) => {
       })
     }
 
-    // Convert file buffer to base64
-    const base64Data = file.buffer.toString('base64')
-    const base64String = `data:${file.mimetype};base64,${base64Data}`
+    const uploadDir = path.join(__dirname, '../../public/uploads')
+    const ext = path.extname(file.originalname) || '.mp4'
+    const storedFileName = `${sectionId}-${Date.now()}${ext}`
+    const storedPath = path.join(uploadDir, storedFileName)
+
+    if (file.path && fs.existsSync(file.path)) {
+      fs.renameSync(file.path, storedPath)
+    } else {
+      fs.writeFileSync(storedPath, fs.readFileSync(file.path || storedPath))
+    }
+
+    const publicUrl = `/uploads/${storedFileName}`
 
     // Generate unique videoId
     const videoId = `${sectionId}-${Date.now()}`
 
     // Try to find existing video for this section and update it
     let video = await Video.findOne({ page: sectionId })
-    
+
     if (video) {
-      // Update existing video
       console.log('Updating existing video:', videoId)
-      video.src = base64String
+      video.src = publicUrl
       video.updatedAt = new Date()
       await video.save()
     } else {
-      // Create new video - use 'ch1' as default chapter for scroll sections
       console.log('Creating new video:', videoId)
       video = new Video({
         videoId,
-        src: base64String,
+        src: publicUrl,
         title: `${sectionId} Video`,
         tag: 'Section',
-        chapter: 'ch1', // Use ch1 as default, store sectionId in page field
+        chapter: 'ch1',
         page: sectionId,
         duration: '0:00',
         color: '#FF6B35',
@@ -196,8 +205,8 @@ exports.uploadVideo = async (req, res) => {
       await video.save()
     }
 
-    console.log('Video saved successfully:', { videoId, page: sectionId })
-    res.status(201).json({ success: true, video })
+    console.log('Video saved successfully:', { videoId, page: sectionId, src: publicUrl })
+    res.status(201).json({ success: true, video, src: publicUrl })
   } catch (error) {
     console.error('Error uploading video:', error.message)
     console.error('Error stack:', error.stack)
