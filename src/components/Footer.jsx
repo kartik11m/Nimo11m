@@ -139,6 +139,10 @@ function BottomLink({ label, to }) {
 }
 
 export default function Footer() {
+  const [email, setEmail] = useState("");
+  const [status, setStatus] = useState("idle");
+  const [message, setMessage] = useState("");
+
   useEffect(() => {
     const link = document.createElement("link");
     link.rel  = "stylesheet";
@@ -146,6 +150,39 @@ export default function Footer() {
     document.head.appendChild(link);
     return () => document.head.removeChild(link);
   }, []);
+
+  const handleSubscribe = async (e) => {
+    e.preventDefault();
+    if (!email.trim()) {
+      setStatus("error");
+      setMessage("Please enter your email address.");
+      return;
+    }
+
+    setStatus("loading");
+    setMessage("");
+
+    try {
+      const response = await fetch("/api/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Subscription failed.");
+      }
+
+      setStatus("success");
+      setMessage(data.message || "You’re subscribed!");
+      setEmail("");
+    } catch (error) {
+      setStatus("error");
+      setMessage(error.message || "Something went wrong. Please try again.");
+    }
+  };
 
   return (
     <footer
@@ -268,23 +305,70 @@ export default function Footer() {
               Camp updates, project showcases, and early-bird offers.
             </span>
           </div>
-          <div className="flex shrink-0">
-            <input type="email" placeholder="your@email.com" className="outline-none"
-              style={{ fontFamily:"'Barlow',sans-serif", fontWeight:300, fontSize:"12px",
-                color:"rgba(255,255,255,.7)", background:"rgba(255,255,255,.04)",
-                border:"1px solid rgba(255,255,255,.1)", borderRight:"none",
-                padding:"11px 18px", width:"220px", letterSpacing:".03em" }} />
-            <button
-              className="cursor-pointer border-0 text-white uppercase whitespace-nowrap shrink-0"
-              style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:400,
-                fontSize:"9px", letterSpacing:".4em", background:C.orange,
-                padding:"11px 22px", boxShadow:"0 0 18px rgba(255,98,48,.22)" }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = "#ff7a4a"; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = C.orange; }}
-            >
-              Subscribe →
-            </button>
-          </div>
+          <form className="flex shrink-0 flex-wrap gap-3" onSubmit={handleSubscribe}>
+            <div className="flex flex-col">
+              <div className="flex">
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    if (status !== "idle") setStatus("idle");
+                  }}
+                  placeholder="your@email.com"
+                  className="outline-none"
+                  style={{ fontFamily:"'Barlow',sans-serif", fontWeight:300, fontSize:"12px",
+                    color:"rgba(255,255,255,.7)", background:"rgba(255,255,255,.04)",
+                    border:"1px solid rgba(255,255,255,.1)", borderRight:"none",
+                    padding:"11px 18px", width:"220px", letterSpacing:".03em" }}
+                />
+                <button
+                  type="submit"
+                  className="cursor-pointer border-0 text-white uppercase whitespace-nowrap shrink-0"
+                  style={{ fontFamily:"'Barlow Condensed',sans-serif", fontWeight:400,
+                    fontSize:"9px", letterSpacing:".4em", background:C.orange,
+                    padding:"11px 22px", boxShadow:"0 0 18px rgba(255,98,48,.22)" }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = "#ff7a4a"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = C.orange; }}
+                >
+                  {status === "loading" ? "Submitting..." : "Subscribe →"}
+                </button>
+              </div>
+              {message ? (
+                <div
+                  className="mt-2 flex items-start gap-2 rounded-xl border px-3 py-2"
+                  style={{
+                    fontFamily:"'Barlow',sans-serif",
+                    fontWeight:300,
+                    fontSize:"12px",
+                    background: status === "success"
+                      ? "rgba(124, 255, 178, 0.12)"
+                      : "rgba(255, 155, 123, 0.12)",
+                    borderColor: status === "success"
+                      ? "rgba(124, 255, 178, 0.25)"
+                      : "rgba(255, 155, 123, 0.25)",
+                    color: status === "success" ? "#7CFFB2" : "#ff9b7b",
+                    boxShadow: status === "success"
+                      ? "0 0 20px rgba(124,255,178,0.12)"
+                      : "0 0 20px rgba(255,155,123,0.12)",
+                    animation: "fadeInUp 0.35s ease-out",
+                  }}
+                >
+                  <span
+                    className="mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full"
+                    style={{
+                      background: status === "success" ? "rgba(124,255,178,0.18)" : "rgba(255,155,123,0.18)",
+                      color: status === "success" ? "#7CFFB2" : "#ff9b7b",
+                      fontSize: "10px",
+                    }}
+                  >
+                    {status === "success" ? "✓" : "!"}
+                  </span>
+                  <span>{message}</span>
+                </div>
+              ) : null}
+            </div>
+          </form>
         </div>
 
         {/* Bottom bar */}
@@ -310,7 +394,8 @@ export default function Footer() {
         </div>
       </div>
 
-      <style>{`@keyframes pulse { 0%,100%{opacity:.4} 50%{opacity:1} }`}</style>
+      <style>{`@keyframes pulse { 0%,100%{opacity:.4} 50%{opacity:1} }
+      @keyframes fadeInUp { from { opacity:0; transform:translateY(4px);} to { opacity:1; transform:translateY(0);} }`}</style>
     </footer>
   );
 }
