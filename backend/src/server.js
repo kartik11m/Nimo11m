@@ -1,4 +1,5 @@
 const express = require('express')
+const path = require('path')
 const cors = require('cors')
 const helmet = require('helmet')
 require('dotenv').config()
@@ -6,26 +7,49 @@ require('dotenv').config()
 const app = express()
 const PORT = process.env.PORT || 5000
 
+module.exports = app
+
 // ── Middleware ────────────────────────────────────────────────
 app.use(helmet()) // Security headers
 app.use(cors({
   origin: function(origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true)
-    
-    // Allow localhost on any port during development
-    if (origin.includes('localhost')) return callback(null, true)
-    
-    // In production, use CORS_ORIGIN env var
-    const allowedOrigin = process.env.CORS_ORIGIN || 'http://localhost:5173'
-    if (origin === allowedOrigin) return callback(null, true)
-    
+
+    const allowedOrigins = [
+      'http://localhost:5173',
+      'http://localhost:3000',
+      'http://127.0.0.1:5173',
+      'http://127.0.0.1:3000',
+    ]
+
+    if (process.env.CORS_ORIGIN) {
+      allowedOrigins.push(process.env.CORS_ORIGIN)
+    }
+
+    if (allowedOrigins.includes(origin)) return callback(null, true)
+    if (origin.includes('localhost') || origin.includes('127.0.0.1') || origin.includes('vercel.app') || origin.includes('netlify.app')) {
+      return callback(null, true)
+    }
+
     callback(new Error('Not allowed by CORS'))
   },
   credentials: true,
 }))
 app.use(express.json({ limit: '500mb' }))
 app.use(express.urlencoded({ extended: true, limit: '500mb' }))
+app.use('/uploads', (req, res, next) => {
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin')
+  res.setHeader('Access-Control-Allow-Origin', '*')
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS')
+  res.setHeader('Access-Control-Allow-Headers', 'Range')
+  res.setHeader('Accept-Ranges', 'bytes')
+  next()
+}, express.static(path.join(__dirname, '../public/uploads'), {
+  maxAge: 0,
+  setHeaders: (res, path) => {
+    res.setHeader('Cache-Control', 'no-cache')
+  },
+}))
 
 // ── Database Connection ───────────────────────────────────────
 const connectDB = require('./config/database')
@@ -103,7 +127,9 @@ app.use((err, req, res, next) => {
 })
 
 // ── Start Server ──────────────────────────────────────────────
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`)
-  console.log(`📡 Environment: ${process.env.NODE_ENV}`)
-})
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`🚀 Server running on http://localhost:${PORT}`)
+    console.log(`📡 Environment: ${process.env.NODE_ENV}`)
+  })
+}
