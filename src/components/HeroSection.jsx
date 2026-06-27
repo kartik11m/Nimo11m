@@ -1,8 +1,29 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
+import { useOwnerAuth } from '../context/OwnerAuthContext'
 
 gsap.registerPlugin(ScrollTrigger)
+
+const DEFAULT_HERO_VIDEO = '/videos/nimo 2 draft..mp4'
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+
+const getMediaBaseUrl = () => {
+  const configuredBase = API_URL.replace(/\/api\/?$/, '')
+  if (configuredBase && configuredBase !== API_URL) return configuredBase
+
+  if (typeof window !== 'undefined') {
+    const protocol = window.location.protocol
+    const hostname = window.location.hostname
+    const isLocalHost = ['localhost', '127.0.0.1', '0.0.0.0'].includes(hostname)
+    const backendHost = isLocalHost ? `${hostname}:5000` : hostname
+    return `${protocol}//${backendHost}`
+  }
+
+  return 'http://localhost:5000'
+}
+
+const MEDIA_BASE_URL = getMediaBaseUrl()
 
 export default function HeroSection() {
   const wrapRef    = useRef(null)
@@ -16,6 +37,22 @@ export default function HeroSection() {
   const taglineRef = useRef(null)
   const ctaRef     = useRef(null)
   const shintRef   = useRef(null)
+  const { isOwner, token } = useOwnerAuth()
+  const [heroVideoSrc, setHeroVideoSrc] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('hero-video-src') || DEFAULT_HERO_VIDEO
+    }
+    return DEFAULT_HERO_VIDEO
+  })
+  const [uploadingVideo, setUploadingVideo] = useState(false)
+
+  const resolveVideoSrc = (src) => {
+    if (!src) return DEFAULT_HERO_VIDEO
+    if (src.startsWith('http://') || src.startsWith('https://')) return src
+    if (src.startsWith('/uploads/')) return `${MEDIA_BASE_URL}${src}`
+    if (src.startsWith('/')) return src
+    return src
+  }
 
   /* ── animated canvas background ── */
   useEffect(() => {
@@ -53,6 +90,68 @@ export default function HeroSection() {
     frame()
     return () => { window.removeEventListener('resize', resize); cancelAnimationFrame(rafId) }
   }, [])
+
+  useEffect(() => {
+    const loadHeroVideo = async () => {
+      try {
+        const res = await fetch(`${API_URL}/videos/page/home`)
+        const data = await res.json()
+        const heroVideo = data?.videos?.find((video) => video.page === 'home' || video.page === 'hero')
+        if (heroVideo?.src) {
+          const nextVideoSrc = resolveVideoSrc(heroVideo.src)
+          localStorage.setItem('hero-video-src', nextVideoSrc)
+          setHeroVideoSrc(nextVideoSrc)
+        } else {
+          setHeroVideoSrc(DEFAULT_HERO_VIDEO)
+        }
+      } catch (error) {
+        console.error('Failed to load hero video:', error)
+      }
+    }
+
+    loadHeroVideo()
+  }, [])
+
+  const handleHeroVideoChange = async (event) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    if (!file.type.startsWith('video/')) {
+      alert('Please choose a valid video file.')
+      return
+    }
+
+    try {
+      setUploadingVideo(true)
+      const formData = new FormData()
+      formData.append('video', file)
+      formData.append('sectionId', 'home')
+
+      const headers = token ? { Authorization: `Bearer ${token}` } : {}
+      const res = await fetch(`${API_URL}/videos/upload`, {
+        method: 'POST',
+        headers,
+        body: formData,
+      })
+
+      const data = await res.json()
+      if (!data.success) throw new Error(data.message || 'Upload failed')
+
+      const nextVideoSrc = resolveVideoSrc(data.src || data.video?.src || DEFAULT_HERO_VIDEO)
+      setHeroVideoSrc(nextVideoSrc)
+      localStorage.setItem('hero-video-src', nextVideoSrc)
+    } catch (error) {
+      console.error('Failed to upload hero video:', error)
+      alert('Failed to update hero video.')
+    } finally {
+      setUploadingVideo(false)
+      event.target.value = ''
+    }
+  }
+
+  const resetHeroVideo = () => {
+    setHeroVideoSrc(DEFAULT_HERO_VIDEO)
+  }
 
   /* ── GSAP scroll reveal ── */
   useEffect(() => {
@@ -113,10 +212,34 @@ export default function HeroSection() {
         {/* canvas bg */}
         <canvas ref={canvasRef} className="absolute inset-0 z-0 w-full h-full" />
 
+        {isOwner && (
+          <div className="absolute right-4 top-4 z-[20] flex flex-wrap gap-2">
+            <label className="cursor-pointer rounded-full border border-white/15 bg-black/45 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.24em] text-white/80 backdrop-blur transition hover:bg-white/10">
+              <input type="file" accept="video/*" className="hidden" onChange={handleHeroVideoChange} />
+              {uploadingVideo ? 'Uploading...' : 'Change Hero Video'}
+            </label>
+            <button
+              onClick={resetHeroVideo}
+              className="rounded-full border border-white/15 bg-black/45 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.24em] text-white/70 backdrop-blur transition hover:bg-white/10"
+            >
+              Reset
+            </button>
+          </div>
+        )}
+
         {/* video (drop your video at /public/videos/hero.mp4) */}
-        <video ref={videoRef} className="absolute inset-0 z-[1] w-full h-full object-cover"
-          src="/videos/nimo 2 draft..mp4" autoPlay muted loop playsInline
-          onError={e => { e.target.style.display = 'none' }} />
+        <video
+          key={heroVideoSrc}
+          ref={videoRef}
+          className="absolute inset-0 z-[1] w-full h-full object-cover"
+          src={heroVideoSrc}
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="auto"
+          onError={(e) => { e.target.style.display = 'none' }}
+        />
 
         {/* overlay */}
         <div ref={overlayRef} className="absolute inset-0 z-[2] opacity-30"
