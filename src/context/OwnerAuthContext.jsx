@@ -4,14 +4,21 @@ const OwnerAuthContext = createContext()
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
+const normalizeToken = (value) => {
+  if (typeof value !== 'string') return ''
+  const trimmed = value.trim()
+  if (!trimmed) return ''
+  return trimmed.replace(/^Bearer\s+/i, '')
+}
+
 export function OwnerAuthProvider({ children }) {
   const [isOwner, setIsOwner] = useState(() => Boolean(localStorage.getItem('ownerToken')))
-  const [token, setToken] = useState(() => localStorage.getItem('ownerToken'))
+  const [token, setToken] = useState(() => normalizeToken(localStorage.getItem('ownerToken')))
   const [loading, setLoading] = useState(true)
 
   // Initialize from localStorage
   useEffect(() => {
-    const storedToken = localStorage.getItem('ownerToken')
+    const storedToken = normalizeToken(localStorage.getItem('ownerToken'))
     if (storedToken) {
       setToken(storedToken)
       setIsOwner(true)
@@ -32,9 +39,10 @@ export function OwnerAuthProvider({ children }) {
 
       if (!data.success) throw new Error(data.message)
 
-      setToken(data.token)
+      const nextToken = normalizeToken(data.token)
+      setToken(nextToken)
       setIsOwner(true)
-      localStorage.setItem('ownerToken', data.token)
+      localStorage.setItem('ownerToken', nextToken)
       return data
     } catch (error) {
       console.error('Login failed:', error)
