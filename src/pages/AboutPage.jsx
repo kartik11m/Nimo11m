@@ -376,6 +376,15 @@ export default function AboutPage() {
 
   return (
     <div style={{ background:C.bg, color:'#fff', minHeight:'100vh', overflow:'hidden' }}>
+      <style>{`
+        /* Milestones: desktop 3-col, mobile auto-fit */
+        .milestones-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(8px,1.6vw,16px);background:rgba(255,255,255,.06);} 
+        .milestone-item{padding:16px;} 
+        @media (max-width:1024px){
+          .milestones-grid{grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:clamp(8px,2vw,16px);} 
+          .milestone-item{padding:12px;}
+        }
+      `}</style>
 
       {/* ══ 1. HERO ═══════════════════════════════════════════════ */}
       <Sec id="about-hero">
@@ -409,18 +418,18 @@ export default function AboutPage() {
       {/* ══ 2. VISION & MISSION ═══════════════════════════════════ */}
       <Sec id="about-vm">
         <SectionLabel text="Vision & Mission" />
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:1, background:'rgba(255,255,255,.06)' }}>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(280px,1fr))', gap:'clamp(12px,2.2vw,24px)', background:'rgba(255,255,255,.06)' }}>
 
           {/* Vision */}
           {aboutContent.visionCards.map((vm) => (
-            <div key={vm.num} style={{ position:'relative', padding:'48px 40px', background:C.bg }}>
+            <div key={vm.num} style={{ position:'relative', padding:'clamp(20px,3.5vw,48px) clamp(16px,2.5vw,40px)', background:C.bg }}>
               <div style={{ position:'absolute', top:0, left:0, right:0, height:'1.5px', background:vm.topLine }} />
               <div style={{ position:'absolute', top:0, left:0, width:20, height:20, borderTop:`1px solid ${vm.accent}`, borderLeft:`1px solid ${vm.accent}` }} />
-              <div style={{ ...bb, fontSize:'7rem', lineHeight:1, color:'transparent', WebkitTextStroke:'1px rgba(255,255,255,.04)', userSelect:'none', marginBottom:'-1.5rem' }}>{vm.num}</div>
-              <span style={{ ...bc, fontSize:8.5, letterSpacing:'.45em', textTransform:'uppercase', color:'rgba(255,255,255,.28)', display:'block', marginBottom:16 }}>{vm.label}</span>
-              <h3 style={{ ...bb, ...getGradientByKey(vm.gradientKey), fontSize:'clamp(2rem,3.5vw,3rem)', letterSpacing:'.02em', lineHeight:.92, marginBottom:20 }}>{vm.heading}</h3>
-              <p style={{ ...bar, fontSize:13.5, lineHeight:1.85, color:'rgba(255,255,255,.42)', letterSpacing:'.02em', maxWidth:'46ch' }}>{vm.body}</p>
-              <div style={{ width:44, height:'1.5px', marginTop:24, background:`linear-gradient(to right,${vm.accent},transparent)` }} />
+              <div style={{ ...bb, fontSize:'clamp(3.5rem,7.5vw,7rem)', lineHeight:1, color:'transparent', WebkitTextStroke:'1px rgba(255,255,255,.04)', userSelect:'none', marginBottom:'-1.2rem' }}>{vm.num}</div>
+              <span style={{ ...bc, fontSize:8.5, letterSpacing:'.45em', textTransform:'uppercase', color:'rgba(255,255,255,.28)', display:'block', marginBottom:12 }}>{vm.label}</span>
+              <h3 style={{ ...bb, ...getGradientByKey(vm.gradientKey), fontSize:'clamp(1.6rem,3.2vw,2.6rem)', letterSpacing:'.02em', lineHeight:.98, marginBottom:12 }}>{vm.heading}</h3>
+              <p style={{ ...bar, fontSize:'clamp(13px,1.3vw,15px)', lineHeight:1.75, color:'rgba(255,255,255,.42)', letterSpacing:'.02em', maxWidth:'46ch' }}>{vm.body}</p>
+              <div style={{ width:44, height:'1.5px', marginTop:18, background:`linear-gradient(to right,${vm.accent},transparent)` }} />
             </div>
           ))}
         </div>
@@ -518,8 +527,12 @@ export default function AboutPage() {
       <div ref={msRef}>
         <Sec id="about-milestones">
           <SectionLabel text="Milestones" />
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:1, background:'rgba(255,255,255,.06)' }}>
-            {aboutContent.milestones.map(m => <MilestoneCard key={m.label} m={m} visible={msVis} />)}
+          <div className="milestones-grid">
+            {aboutContent.milestones.map(m => (
+              <div key={m.label} className="milestone-item">
+                <MilestoneCard m={m} visible={msVis} />
+              </div>
+            ))}
           </div>
         </Sec>
       </div>
@@ -561,7 +574,7 @@ export default function AboutPage() {
           </div>
 
           {/* Differentiator cards */}
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:14, marginBottom:52 }}>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(260px,1fr))', gap:'clamp(16px,2vw,24px)', marginBottom:52 }}>
             {aboutContent.diffCards.map(c => <DiffCard key={c.title} c={c} />)}
           </div>
 
