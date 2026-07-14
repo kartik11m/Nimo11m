@@ -7,7 +7,7 @@ import EditableText from './EditableText'
  * All animation (opacity, y, filter, card-rule scaleX) is driven externally
  * by GSAP in ScrollVideoSection — this component just provides the DOM.
  */
-const AnimatedTextCard = forwardRef(function AnimatedTextCard({ data }, ref) {
+const AnimatedTextCard = forwardRef(function AnimatedTextCard({ data, staticMode = false, inline = false }, ref) {
   // Ensure data.id is used correctly - it should be 0, 1, 2, 3
   const sectionId = data?.id ?? 0
   
@@ -16,12 +16,15 @@ const AnimatedTextCard = forwardRef(function AnimatedTextCard({ data }, ref) {
     console.log(`AnimatedTextCard rendered with sectionId: ${sectionId}, data:`, data)
   }
 
+  const wrapperClassName = staticMode || inline
+    ? 'relative w-full flex flex-col justify-center opacity-100 px-4 py-10 sm:px-0'
+    : 'absolute inset-y-0 left-10 right-14 flex flex-col justify-center opacity-0'
+
   return (
     <div
       ref={ref}
       data-chapter={sectionId}
-      /* opacity-0 is the resting state; GSAP animates it in */
-      className="absolute inset-y-0 left-10 right-14 flex flex-col justify-center opacity-0"
+      className={wrapperClassName}
       style={{ willChange: 'transform, opacity, filter' }}
     >
       {/* Ghost chapter number */}
@@ -89,7 +92,7 @@ const AnimatedTextCard = forwardRef(function AnimatedTextCard({ data }, ref) {
 
       {/* Animated rule — GSAP drives scaleX 0 → 1 */}
       <div
-        className="card-rule w-14 h-[1.5px] mb-6"
+        className="card-rule w-14 h-[1.5px] mb-6 origin-left"
         style={{ background: `linear-gradient(to right, ${data.accent}, rgba(${data.rgb},.4))` }}
       />
 
