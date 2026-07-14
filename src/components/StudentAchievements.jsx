@@ -483,7 +483,10 @@ export default function StudentAchievements() {
 
   const achievements = achievementData.length > 0 ? achievementData : fallbackAchievements
   const featured = achievements[featuredIdx] || achievements[0]
-  const others   = achievements.filter((_, i) => i !== featuredIdx)
+  const others = achievements
+    .map((ach, index) => ({ ...ach, index }))
+    .filter((ach) => ach.index !== featuredIdx)
+
   const previewStats = [
     { end: Math.max(6200, achievements.length * 1200), suffix: '+', label: 'Students Trained', color: '#FF6B35', rgb: '255,107,53' },
     { end: Math.max(340, achievements.length * 80), suffix: '+', label: 'Robots Built', color: '#00F5FF', rgb: '0,245,255' },
@@ -591,14 +594,14 @@ export default function StudentAchievements() {
         </div>
 
         {/* ── Main grid: featured + small stack ───────────── */}
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-5 mb-5">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-5 mb-5 items-start">
 
           {/* Featured card */}
-          <div style={{ minHeight: 420 }}>
+          <div className="self-start" style={{ minHeight: 540 }}>
             {!loadingAchievements && featured ? (
               <FeaturedCard ach={featured} visible={!changing} />
             ) : (
-              <div className="h-full flex items-center justify-center rounded border border-white/[.08] bg-white/[.02] text-[#F0EAD6]/40" style={{ minHeight: 420 }}>
+              <div className="h-full flex items-center justify-center rounded border border-white/[.08] bg-white/[.02] text-[#F0EAD6]/40" style={{ minHeight: 540 }}>
                 Loading achievements…
               </div>
             )}
@@ -618,8 +621,8 @@ export default function StudentAchievements() {
               <SmallCard
                 key={ach.id}
                 ach={ach}
-                isActive={ach.id === featuredIdx}
-                onClick={() => handleSwap(ach.id)}
+                isActive={ach.index === featuredIdx}
+                onClick={() => handleSwap(ach.index)}
               />
             ))}
 
