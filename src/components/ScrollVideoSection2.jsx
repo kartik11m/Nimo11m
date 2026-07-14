@@ -73,7 +73,10 @@ export default function ScrollVideoSection2() {
   const [chapterLabel,  setChapterLabel]  = useState('Chapter Two')
   const [autoplayEnabled, setAutoplayEnabled] = useState(false)
   const [videoUrl, setVideoUrl] = useState('/videos/nikki1.mp4')
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' ? window.matchMedia('(max-width: 767px)').matches : false)
   const autoplayEnabledRef = useRef(false)
+
+  const staticSections = sections.slice(1)
 
   useEffect(() => {
     autoplayEnabledRef.current = autoplayEnabled
@@ -101,6 +104,41 @@ export default function ScrollVideoSection2() {
     fetchVideo()
   }, [])
 
+  useEffect(() => {
+    const video = videoRef.current
+    if (!video) return
+
+    const handleLoadedMetadata = () => {
+      videoDuration.current = video.duration || 1
+      video.currentTime = 0
+    }
+
+    video.addEventListener('loadedmetadata', handleLoadedMetadata)
+    video.load()
+
+    return () => {
+      video.removeEventListener('loadedmetadata', handleLoadedMetadata)
+    }
+  }, [videoUrl, isMobile])
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(max-width: 767px)')
+    const handleMediaChange = (event) => setIsMobile(event.matches)
+    if (mediaQuery.addEventListener) {
+      mediaQuery.addEventListener('change', handleMediaChange)
+    } else {
+      mediaQuery.addListener(handleMediaChange)
+    }
+
+    return () => {
+      if (mediaQuery.removeEventListener) {
+        mediaQuery.removeEventListener('change', handleMediaChange)
+      } else {
+        mediaQuery.removeListener(handleMediaChange)
+      }
+    }
+  }, [])
+
   const handleVideoUploadSuccess = (videoData) => {
     // Use base64 src data from uploaded video
     setVideoUrl(videoData.src)
@@ -112,7 +150,7 @@ export default function ScrollVideoSection2() {
   }
 
   useEffect(() => {
-    const cards = cardRefs.current
+    const cards = isMobile ? [cardRefs.current[0]] : cardRefs.current
     let currentChapter = 0
 
     const tl = gsap.timeline({ paused: true })
@@ -137,7 +175,7 @@ export default function ScrollVideoSection2() {
           s + 0.04,
         )
       }
-      if (i < sections.length - 1) {
+      if (!isMobile && i < sections.length - 1) {
         tl.to(
           card,
           { opacity: 0, y: -20, filter: 'blur(8px)', ease: 'power2.in', duration: 0.12 },
@@ -149,9 +187,11 @@ export default function ScrollVideoSection2() {
     const st = ScrollTrigger.create({
       trigger: sectionRef.current,
       start: 'top top',
-      end: '+=2000',
+      end: isMobile ? '+=1400' : '+=2000',
       scrub: 1.0,
       pin: true,
+      pinSpacing: true,
+      pinType: 'fixed',
       anticipatePin: 1,
       onUpdate(self) {
         tl.progress(self.progress)
@@ -184,103 +224,129 @@ export default function ScrollVideoSection2() {
       st.kill()
       tl.kill()
     }
-  }, [])
+  }, [isMobile])
 
   return (
-    <section ref={sectionRef} className="relative h-screen flex overflow-hidden">
+    <>
+      <section ref={sectionRef} className="relative min-h-screen h-screen flex flex-col overflow-hidden" style={{ zIndex: 0 }}>
 
-      {/* ════════ LEFT — Content cards ════════ */}
-      <div className="relative w-[45%] h-full">
-        {sections.map((section, i) => (
-          <div
-            key={section.id}
-            style={{
-              position: 'absolute',
-              inset: 0,
-              pointerEvents: activeChapter === i ? 'auto' : 'none',
-              zIndex: activeChapter === i ? 10 : 0
-            }}
-          >
-            <AnimatedTextCard1
-              data={section}
-              ref={(el) => { cardRefs.current[i] = el }}
-            />
-          </div>
-        ))}
-      </div>
-
-      {/* ════════ RIGHT — Video panel ════════ */}
-      <div className="relative w-[55%] h-full flex-shrink-0 overflow-hidden">
-        <video
-          ref={videoRef}
-          className="absolute inset-0 h-full w-full"
-          src={videoUrl}
-          muted
-          playsInline
-          preload="auto"
-          onLoadedMetadata={() => {
-            const video = videoRef.current
-            if (!video) return
-            videoDuration.current = video.duration || 1
-            video.currentTime = 0
-          }}
-        />
-
-        {/* Video upload button for owner */}
-        {isOwner && (
-          <div className="absolute top-8 right-10 z-20">
-            <VideoUploader sectionId="chapter-two" onUploadSuccess={handleVideoUploadSuccess} />
-          </div>
-        )}
-
-        {/* Vignette — mirrors from right side */}
-        <div
-          className="absolute inset-0 pointer-events-none z-[2]"
-          style={{
-            background:
-              'linear-gradient(to right, #050508 0%, transparent 30%, transparent 70%, #050508 100%), linear-gradient(to bottom, #050508 0%, transparent 12%, transparent 88%, #050508 100%)',
-          }}
-        />
-
-        {/* Autoplay toggle */}
-        <div className="absolute bottom-8 right-10 z-20">
-          <button
-            type="button"
-            onClick={() => setAutoplayEnabled((v) => !v)}
-            aria-label={autoplayEnabled ? 'Pause autoplay' : 'Enable autoplay'}
-            className="flex h-12 w-12 items-center justify-center rounded-full border border-white/15 bg-black/60 text-white transition duration-300 hover:bg-[#FF6B35]/90"
-          >
-            <span className="text-xl">{autoplayEnabled ? '❚❚' : '↻'}</span>
-          </button>
-        </div>
-
-        {/* Vertical chapter dot-nav */}
-        <div className="absolute right-8 top-1/2 -translate-y-1/2 z-10 flex flex-col items-center">
-          {sections.map((s, i) => (
-            <div key={s.id} className="flex flex-col items-center">
-              {i > 0 && <div className="w-px h-5 bg-white/[.07]" />}
-              <div
-                className="w-1.5 h-1.5 rounded-full border border-white/20 transition-all duration-500"
-                style={activeChapter === i
-                  ? { background: sections[i].accent, borderColor: sections[i].accent, boxShadow: `0 0 8px ${sections[i].accent}` }
-                  : { background: 'transparent' }
-                }
+        {isMobile ? (
+          <div className="w-full flex flex-col">
+            <div className="w-full h-[44vh] sm:h-[48vh] overflow-hidden relative">
+              <video
+                key="mobile-video"
+                ref={videoRef}
+                className="absolute inset-0 h-full w-full"
+                src={videoUrl}
+                muted
+                playsInline
+                preload="auto"
               />
             </div>
-          ))}
-        </div>
 
-        {/* Chapter label */}
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10 flex items-center gap-3 whitespace-nowrap">
-          <div className="w-8 h-px flex-shrink-0 transition-all duration-500" style={{ background: sections[activeChapter].accent }} />
-          <span
-            className="font-light text-[.68rem] tracking-[.45em] uppercase text-white/35 transition-all duration-500"
-            style={syne}
-          >
-            {chapterLabel}
-          </span>
+            <div className="w-full px-4 py-8 relative">
+              <AnimatedTextCard1
+                data={sections[0]}
+                staticMode
+                ref={(el) => { cardRefs.current[0] = el }}
+              />
+            </div>
+          </div>
+        ) : (
+          <div className="relative flex h-full overflow-hidden">
+            <div className="relative w-[45%] h-full">
+              {sections.map((section, i) => (
+                <div
+                  key={section.id}
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    pointerEvents: activeChapter === i ? 'auto' : 'none',
+                    zIndex: activeChapter === i ? 10 : 0
+                  }}
+                >
+                  <AnimatedTextCard1
+                    data={section}
+                    ref={(el) => { cardRefs.current[i] = el }}
+                  />
+                </div>
+              ))}
+            </div>
+
+            <div className="relative w-[55%] h-full flex-shrink-0 overflow-hidden">
+              <video
+                key="desktop-video"
+                ref={videoRef}
+                className="absolute inset-0 h-full w-full"
+                src={videoUrl}
+                muted
+                playsInline
+                preload="auto"
+              />
+
+              {isOwner && (
+                <div className="absolute top-8 right-10 z-20">
+                  <VideoUploader sectionId="chapter-two" onUploadSuccess={handleVideoUploadSuccess} />
+                </div>
+              )}
+
+              <div
+                className="absolute inset-0 pointer-events-none z-[2]"
+                style={{
+                  background:
+                    'linear-gradient(to right, #050508 0%, transparent 30%, transparent 70%, #050508 100%), linear-gradient(to bottom, #050508 0%, transparent 12%, transparent 88%, #050508 100%)',
+                }}
+              />
+
+              <div className="absolute bottom-8 right-10 z-20">
+                <button
+                  type="button"
+                  onClick={() => setAutoplayEnabled((v) => !v)}
+                  aria-label={autoplayEnabled ? 'Pause autoplay' : 'Enable autoplay'}
+                  className="flex h-12 w-12 items-center justify-center rounded-full border border-white/15 bg-black/60 text-white transition duration-300 hover:bg-[#FF6B35]/90"
+                >
+                  <span className="text-xl">{autoplayEnabled ? '❚❚' : '↻'}</span>
+                </button>
+              </div>
+
+              <div className="absolute right-8 top-1/2 -translate-y-1/2 z-10 flex flex-col items-center">
+                {sections.map((s, i) => (
+                  <div key={s.id} className="flex flex-col items-center">
+                    {i > 0 && <div className="w-px h-5 bg-white/[.07]" />}
+                    <div
+                      className="w-1.5 h-1.5 rounded-full border border-white/20 transition-all duration-500"
+                      style={activeChapter === i
+                        ? { background: sections[i].accent, borderColor: sections[i].accent, boxShadow: `0 0 8px ${sections[i].accent}` }
+                        : { background: 'transparent' }
+                      }
+                    />
+                  </div>
+                ))}
+              </div>
+
+              <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10 flex items-center gap-3 whitespace-nowrap">
+                <div className="w-8 h-px flex-shrink-0 transition-all duration-500" style={{ background: sections[activeChapter].accent }} />
+                <span
+                  className="font-light text-[.68rem] tracking-[.45em] uppercase text-white/35 transition-all duration-500"
+                  style={syne}
+                >
+                  {chapterLabel}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+      </section>
+
+      {isMobile ? (
+        <div className="bg-[#020203] px-4 py-12">
+          <div className="mx-auto max-w-6xl space-y-6">
+            {staticSections.map((section) => (
+              <AnimatedTextCard1 key={section.id} data={section} staticMode />
+            ))}
+          </div>
         </div>
-      </div>
-    </section>
+      ) : null}
+    </>
   )
 }
