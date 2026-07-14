@@ -7,15 +7,19 @@ import EditableText from './EditableText'
  * All animation (opacity, y, filter, card-rule scaleX) is driven externally
  * by GSAP — this component provides the DOM with editable content.
  */
-const AnimatedTextCard1 = forwardRef(function AnimatedTextCard1({ data }, ref) {
+const AnimatedTextCard1 = forwardRef(function AnimatedTextCard1({ data, staticMode = false, inline = false }, ref) {
   const sectionId = data?.id ?? 0
   console.log(`AnimatedTextCard1 rendered with sectionId: ${sectionId}, data:`, data)
+
+  const wrapperClassName = staticMode || inline
+    ? 'relative w-full flex flex-col justify-center opacity-100 px-4 py-10 sm:px-0'
+    : 'absolute inset-y-0 right-12 flex flex-col justify-center opacity-0'
 
   return (
     <div
       ref={ref}
-      /* opacity-0 is the resting state; GSAP animates it in */
-      className="absolute inset-y-0 right-12 flex flex-col justify-center opacity-0"
+      data-chapter={sectionId}
+      className={wrapperClassName}
       style={{ willChange: 'transform, opacity, filter' }}
     >
       {/* Ghost chapter number */}
