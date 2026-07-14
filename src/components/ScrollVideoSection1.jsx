@@ -17,7 +17,7 @@ export default function ScrollVideoSection1() {
   const videoDuration   = useRef(1)
   const videoTargetTime = useRef(0)
   const videoFrame      = useRef(null)
-  const cardRefs        = useRef([])         // array of card DOM nodes for GSAP
+  const cardRefs        = useRef([])
   const tlRef           = useRef(null)       // GSAP timeline ref
 
   const [activeChapter, setActiveChapter] = useState(0)
@@ -26,6 +26,10 @@ export default function ScrollVideoSection1() {
   const autoplayEnabledRef = useRef(false)
   const [videoUrl, setVideoUrl] = useState('/videos/nikki1.mp4')
   const [videoKey] = useState('section-1')
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' ? window.matchMedia('(max-width: 767px)').matches : false)
+
+  const animatedSection = sections[0]
+  const staticSections = sections.slice(1)
 
   // Fetch video from database on mount
   useEffect(() => {
@@ -67,8 +71,42 @@ export default function ScrollVideoSection1() {
   }, [autoplayEnabled])
 
   useEffect(() => {
-    const cards = cardRefs.current
-    let currentChapter = 0
+    const video = videoRef.current
+    if (!video) return
+
+    const handleLoadedMetadata = () => {
+      videoDuration.current = video.duration || 1
+      video.currentTime = 0
+    }
+
+    video.addEventListener('loadedmetadata', handleLoadedMetadata)
+    video.load()
+
+    return () => {
+      video.removeEventListener('loadedmetadata', handleLoadedMetadata)
+    }
+  }, [videoUrl, isMobile])
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(max-width: 767px)')
+    const handleMediaChange = (event) => setIsMobile(event.matches)
+    if (mediaQuery.addEventListener) {
+      mediaQuery.addEventListener('change', handleMediaChange)
+    } else {
+      mediaQuery.addListener(handleMediaChange)
+    }
+
+    return () => {
+      if (mediaQuery.removeEventListener) {
+        mediaQuery.removeEventListener('change', handleMediaChange)
+      } else {
+        mediaQuery.removeListener(handleMediaChange)
+      }
+    }
+  }, [])
+
+  useEffect(() => {
+    const cards = isMobile ? [cardRefs.current[0]] : cardRefs.current
 
     // ── Build GSAP timeline ──────────────────────────────────────
     //
@@ -78,7 +116,7 @@ export default function ScrollVideoSection1() {
     // Layout per card (each owns 0.25 of the total progress range):
     //   s + 0.00 → fade IN  starts  (duration 0.10)
     //   s + 0.03 → rule     expands (duration 0.09)
-    //   s + 0.25 → fade OUT starts  (duration 0.10) — overlaps with next card IN
+    //   s + 0.25 → fade OUT starts  (duration 0.10)
     //
     const tl = gsap.timeline({ paused: true })
     tlRef.current = tl
@@ -106,8 +144,8 @@ export default function ScrollVideoSection1() {
         )
       }
 
-      // Crossfade out (starts at same time as next card's fade-in)
-      if (i < sections.length - 1) {
+      // Crossfade out (desktop only — mobile should keep chapter one visible)
+      if (!isMobile && i < sections.length - 1) {
         tl.to(
           card,
           { opacity: 0, y: -55, filter: 'blur(12px)', ease: 'power2.in', duration: 0.10 },
@@ -125,19 +163,12 @@ export default function ScrollVideoSection1() {
     const st = ScrollTrigger.create({
       trigger: sectionRef.current,
       start: 'top top',
-      end: '+=2000',
+      end: isMobile ? '+=1400' : '+=2000',
       scrub: 1.2,
       pin: true,
       anticipatePin: 1,
       onUpdate(self) {
         tl.progress(self.progress)
-
-        const chapterIndex = Math.min(sections.length - 1, Math.floor(self.progress * sections.length))
-        if (chapterIndex !== currentChapter) {
-          currentChapter = chapterIndex
-          setActiveChapter(chapterIndex)
-          setChapterLabel(sections[chapterIndex].chapter)
-        }
 
         const clipProgress = Math.min(Math.max(self.progress, 0), 1)
         videoTargetTime.current = clipProgress * videoDuration.current
@@ -166,95 +197,127 @@ export default function ScrollVideoSection1() {
       st.kill()
       tl.kill()
     }
-  }, [])
+  }, [isMobile, videoUrl])
 
   return (
-    <section
-      ref={sectionRef}
-      className="relative h-screen flex overflow-hidden"
-    >
-      {/* ════════ LEFT — Three.js canvas panel ════════ */}
-      <div className="relative w-[55%] h-full flex-shrink-0 overflow-hidden">
-        <video
-          ref={videoRef}
-          className="absolute inset-0 h-full w-full "
-          src={videoUrl}
-          muted
-          playsInline
-          preload="auto"
-          onLoadedMetadata={() => {
-            const video = videoRef.current
-            if (!video) return
-            videoDuration.current = video.duration || 1
-            video.currentTime = 0
-          }}
-        />
+    <>
+      <section
+        ref={sectionRef}
+        className="relative min-h-screen flex flex-col md:flex-row overflow-hidden"
+      >
+        {/* ════════ LEFT — Three.js canvas panel ════════ */}
+        {!isMobile && (
+          <div className="relative w-full md:w-[55%] h-[50vh] md:h-full flex-shrink-0 overflow-hidden">
+            <video
+              key="desktop-video"
+              ref={videoRef}
+              className="absolute inset-0 h-full w-full object-contain"
+              src={videoUrl}
+              muted
+              playsInline
+              preload="auto"
+            />
 
-        {/* Gradient vignette — fades canvas edges into the bg */}
-        <div className="canvas-vignette absolute inset-0 pointer-events-none z-[2]" />
-        
-        {/* Video upload button for owner */}
-        {isOwner && (
-          <div className="absolute top-8 right-8 z-20">
-            <VideoUploader sectionId="section-1" onUploadSuccess={handleVideoUploadSuccess} />
+            {/* Gradient vignette — fades canvas edges into the bg */}
+            <div className="canvas-vignette absolute inset-0 pointer-events-none z-[2]" />
+            
+            {/* Video upload button for owner */}
+            {isOwner && (
+              <div className="absolute top-8 right-8 z-20">
+                <VideoUploader sectionId="section-1" onUploadSuccess={handleVideoUploadSuccess} />
+              </div>
+            )}
+            <div className="absolute bottom-8 right-8 z-20">
+              <button
+                type="button"
+                onClick={() => setAutoplayEnabled((value) => !value)}
+                aria-label={autoplayEnabled ? 'Pause autoplay' : 'Enable autoplay'}
+                className="flex h-12 w-12 items-center justify-center rounded-full border border-white/15 bg-black/60 text-white transition duration-300 hover:bg-cyan/90 hover:text-slate-950"
+              >
+                <span className="text-xl">
+                  {autoplayEnabled ? '❚❚' : '↻'}
+                </span>
+              </button>
+            </div>
+
+            {/* Vertical chapter dot-nav */}
+            <div className="absolute left-8 top-1/2 -translate-y-1/2 z-10 flex flex-col items-center">
+              {sections.map((s, i) => (
+                <div key={s.id} className="flex flex-col items-center">
+                  {i > 0 && (
+                    <div className="w-px h-5 bg-white/[.07]" />
+                  )}
+                  <div className={`nav-dot${activeChapter === i ? ' active' : ''}`} />
+                </div>
+              ))}
+            </div>
+
+            {/* Chapter label at bottom */}
+            <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10 flex items-center gap-3 whitespace-nowrap">
+              <div
+                className="w-8 h-px flex-shrink-0"
+                style={{ background: '#FF6230' }}
+              />
+              <span className="font-condensed font-light text-[.68rem] tracking-[.45em] uppercase text-white/35 transition-all duration-500">
+                {chapterLabel}
+              </span>
+            </div>
           </div>
         )}
-        <div className="absolute bottom-8 right-8 z-20">
-          <button
-            type="button"
-            onClick={() => setAutoplayEnabled((value) => !value)}
-            aria-label={autoplayEnabled ? 'Pause autoplay' : 'Enable autoplay'}
-            className="flex h-12 w-12 items-center justify-center rounded-full border border-white/15 bg-black/60 text-white transition duration-300 hover:bg-cyan/90 hover:text-slate-950"
-          >
-            <span className="text-xl">
-              {autoplayEnabled ? '❚❚' : '↻'}
-            </span>
-          </button>
-        </div>
 
-        {/* Vertical chapter dot-nav */}
-        <div className="absolute left-8 top-1/2 -translate-y-1/2 z-10 flex flex-col items-center">
-          {sections.map((s, i) => (
-            <div key={s.id} className="flex flex-col items-center">
-              {i > 0 && (
-                <div className="w-px h-5 bg-white/[.07]" />
-              )}
-              <div className={`nav-dot${activeChapter === i ? ' active' : ''}`} />
+      {/* ════════ RIGHT — Chapter content ════════ */}
+      {isMobile ? (
+        <div className="w-full flex flex-col">
+<div className="w-full h-[44vh] sm:h-[48vh] overflow-hidden relative">
+          <video
+            key="mobile-video"
+            ref={videoRef}
+            className="absolute inset-0 h-full w-full "
+            src={videoUrl}
+            muted
+            playsInline
+            preload="auto"
+          />
+          </div>
+
+          <div className="w-full px-4 py-8 relative">
+            <AnimatedTextCard
+              data={animatedSection}
+              staticMode
+              ref={(el) => { cardRefs.current[0] = el }}
+            />
+          </div>
+        </div>
+      ) : (
+        <div className="relative w-full md:w-[45%] h-full overflow-hidden">
+          {sections.map((section, i) => (
+            <div
+              key={section.id}
+              className="absolute inset-0"
+              style={{
+                pointerEvents: activeChapter === i ? 'auto' : 'none',
+                zIndex: activeChapter === i ? 10 : 0,
+              }}
+            >
+              <AnimatedTextCard
+                data={section}
+                ref={(el) => { cardRefs.current[i] = el }}
+              />
             </div>
           ))}
         </div>
+      )}
+    </section>
 
-        {/* Chapter label at bottom */}
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10 flex items-center gap-3 whitespace-nowrap">
-          <div
-            className="w-8 h-px flex-shrink-0"
-            style={{ background: '#FF6230' }}
-          />
-          <span className="font-condensed font-light text-[.68rem] tracking-[.45em] uppercase text-white/35 transition-all duration-500">
-            {chapterLabel}
-          </span>
+    {isMobile ? (
+      <div className="bg-[#020203] px-4 py-12">
+        <div className="mx-auto max-w-6xl space-y-6">
+          {staticSections.map((section) => (
+            <AnimatedTextCard key={section.id} data={section} staticMode />
+          ))}
         </div>
       </div>
-
-      {/* ════════ RIGHT — Content cards ════════ */}
-      <div className="relative w-[45%] h-full">
-        {sections.map((section, i) => (
-          <div
-            key={section.id}
-            style={{
-              position: 'absolute',
-              inset: 0,
-              pointerEvents: activeChapter === i ? 'auto' : 'none',
-              zIndex: activeChapter === i ? 10 : 0
-            }}
-          >
-            <AnimatedTextCard
-              data={section}
-              ref={(el) => { cardRefs.current[i] = el }}
-            />
-          </div>
-        ))}
-      </div>
-    </section>
+    ) : null}
+    </>
   )
 }
