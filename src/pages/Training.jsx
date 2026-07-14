@@ -504,11 +504,11 @@ export default function TrainingPage() {
       </section>
 
       {/* ══ LEARNING PATH ════════════════════════════════════════ */}
-      <div className="px-12 py-8 bg-white/[.015] border-b border-white/[.07]">
-        <div className="max-w-[1100px] mx-auto flex items-center">
-          {pathSteps.map((step, i) => (
-            <Fragment key={step.title}>
-              <div className="flex-1 flex items-center gap-3.5 px-6 py-[18px] hover:bg-white/[.02] transition-colors duration-300 cursor-default">
+      <div className="px-6 md:px-12 py-8 bg-white/[.015] border-b border-white/[.07]">
+        <div className="max-w-[1100px] mx-auto">
+          <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3">
+            {pathSteps.map((step, i) => (
+              <div key={step.title} className="flex w-full md:flex-1 items-center gap-3.5 px-4 md:px-6 py-4 hover:bg-white/[.02] transition-colors duration-300 cursor-default">
                 <div
                   className="w-10 h-10 rounded-full flex items-center justify-center text-base flex-shrink-0"
                   style={{ background: `rgba(${step.rgb},.1)`, boxShadow: `0 0 0 1px rgba(${step.rgb},.2)` }}
@@ -523,12 +523,15 @@ export default function TrainingPage() {
                   <div className="text-[13px] font-bold" style={syne}><EditableText contentId={`training.path.${i}.title`}>{step.title}</EditableText></div>
                   <div className="text-[11px] font-light text-[#F0EAD6]/40 mt-0.5" style={dmSans}><EditableText contentId={`training.path.${i}.sub`}>{step.sub}</EditableText></div>
                 </div>
+
+                {i < pathSteps.length - 1 && (
+                  <div className="hidden md:flex items-center px-2">
+                    <span className="text-lg text-[#F0EAD6]/[.12] flex-shrink-0">›</span>
+                  </div>
+                )}
               </div>
-              {i < pathSteps.length - 1 && (
-                <span className="text-lg text-[#F0EAD6]/[.12] flex-shrink-0 -mx-2 z-[1]">›</span>
-              )}
-            </Fragment>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
 
