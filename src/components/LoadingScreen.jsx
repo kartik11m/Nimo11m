@@ -380,7 +380,7 @@ export default function LoadingScreen({ onComplete }) {
       >
         <div className="font-orbitron text-[28px] font-black text-cyan leading-none mb-1.5"
           style={{ textShadow: '0 0 24px #00f5ff' }}>
-          Hi there!
+          Hi There!
         </div>
         <div className="sub-text font-rajdhani text-sm font-light text-white/60 tracking-wide leading-relaxed">
           Please wait while we load our content for you…
