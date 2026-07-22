@@ -82,6 +82,15 @@ html, body { height: 100%; margin: 0; padding: 0; background: #020408; color: #e
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
+    color: transparent;
+  }
+  .page-hero-title {
+    background: linear-gradient(160deg, #F0EAD6 0%, rgba(240,234,214,.35) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    color: transparent;
+    display: inline-block;
   }
 }
 
