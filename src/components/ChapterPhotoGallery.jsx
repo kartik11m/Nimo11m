@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { useOwnerAuth } from '../context/OwnerAuthContext'
 
 const bebasNeue = { fontFamily: "'Bebas Neue', sans-serif" }
@@ -43,6 +44,7 @@ function MosaicCell({ photo, layout, chapterColor, chapterRgb, index, total, onC
       <img
         src={photo.src}
         alt={photo.caption}
+        onLoad={() => ScrollTrigger.refresh()}
         className="w-full h-full object-cover"
         style={{
           transform:  hov ? 'scale(1.06)' : 'scale(1)',
