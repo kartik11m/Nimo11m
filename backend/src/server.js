@@ -62,12 +62,22 @@ const initializeEvents = require('./utils/initializeEvents')
 const initializeCards = require('./utils/initializeCards')
 
 app.use(async (req, res, next) => {
+  // Allow health check and root without blocking on DB
+  if (req.path === '/' || req.path === '/health') {
+    return next()
+  }
+
   try {
     await connectDB()
+    next()
   } catch (err) {
-    console.error('DB middleware connection error:', err)
+    console.error('DB middleware connection error:', err.message)
+    res.status(500).json({
+      success: false,
+      message: `Database Connection Failed: ${err.message}`,
+      hint: 'Ensure MONGODB_URI or MONGODB_ATLAS_URI is set in Vercel Environment Variables and MongoDB Atlas IP access list includes 0.0.0.0/0',
+    })
   }
-  next()
 })
 
 // ── Initialize Owner Account ──────────────────────────────────
