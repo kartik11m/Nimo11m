@@ -225,17 +225,13 @@ export default function Footer() {
             </div>
 
             <div className="flex items-center" style={{ gap:".65rem", marginBottom:"1.25rem" }}>
-              <div className="relative flex items-center justify-center shrink-0"
-                style={{ width:"40px", height:"40px", background:"rgba(255,98,48,.07)" }}>
+              <div className="relative flex items-center justify-center shrink-0 overflow-hidden rounded-lg p-0.5"
+                style={{ width:"44px", height:"44px", background:"rgba(255,98,48,.07)", border:`1px solid ${C.orange}44` }}>
                 <div className="absolute top-0 left-0"
                   style={{ width:"10px", height:"10px", borderTop:`1px solid ${C.orange}`, borderLeft:`1px solid ${C.orange}` }} />
                 <div className="absolute bottom-0 right-0"
                   style={{ width:"10px", height:"10px", borderBottom:"1px solid rgba(139,49,232,.5)", borderRight:"1px solid rgba(139,49,232,.5)" }} />
-                <span style={{ fontFamily:"'Bebas Neue',cursive", fontSize:"16px",
-                  background:`linear-gradient(135deg,${C.orange},${C.pink})`,
-                  WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", backgroundClip:"text" }}>
-                  NL
-                </span>
+                <img src="/nimo_logo.jpeg" alt="Nimo Labs Logo" className="w-full h-full object-cover rounded" />
               </div>
               <div>
                 <span className="block leading-none"

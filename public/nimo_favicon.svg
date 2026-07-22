@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <rect x="2" y="2" width="60" height="60" rx="16" fill="#050816" stroke="#00F5FF" stroke-width="2"/>
+  <rect x="8" y="8" width="48" height="48" rx="12" fill="#ffffff"/>
+  <image href="/nimo_logo.jpeg" x="10" y="10" width="44" height="44" preserveAspectRatio="xMidYMid meet"/>
+</svg>

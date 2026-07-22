@@ -23,8 +23,18 @@ export default function Navbar() {
       style={{ background: 'linear-gradient(to bottom,rgba(2,4,8,.95),transparent)' }}>
 
       {/* Logo */}
-      <Link to="/" className="font-mono text-sm font-bold tracking-[4px] uppercase text-white">
-        Nimo<span className="text-cyan">.</span>Labs
+      <Link to="/" className="flex items-center gap-3 no-underline group min-w-0">
+        <div className="relative flex h-14 w-14 items-center justify-center rounded-full border border-cyan/30 bg-slate-950/80 p-1.5 shadow-[0_0_14px_rgba(0,223,255,0.2)] transition-all duration-300 group-hover:border-cyan group-hover:shadow-[0_0_16px_rgba(0,223,255,0.3)]">
+          <img src="/nimo_logo.jpeg" alt="Nimo Labs Logo" className="h-full w-full rounded-full object-contain bg-white/95" />
+        </div>
+        <div className="flex flex-col leading-none">
+          <span className="font-mono text-sm font-bold tracking-[3px] uppercase text-white group-hover:text-cyan transition-colors duration-300">
+            Nimo<span className="text-cyan">.</span>Labs
+          </span>
+          <span className="mt-1 text-[9px] uppercase tracking-[2px] text-white/50">
+            Robotics Lab
+          </span>
+        </div>
       </Link>
 
       {/* Desktop links */}

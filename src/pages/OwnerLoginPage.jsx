@@ -41,7 +41,10 @@ export default function OwnerLoginPage() {
     <div className="min-h-screen bg-[#020203] flex items-center justify-center px-4">
       <div className="w-full max-w-md">
         {/* Logo/Title */}
-        <div className="text-center mb-12">
+        <div className="text-center mb-10 flex flex-col items-center">
+          <div className="w-16 h-16 rounded-2xl overflow-hidden border border-[#FF6B35]/40 p-1 bg-black/60 shadow-[0_0_30px_rgba(255,107,53,0.25)] mb-4">
+            <img src="/nimo_logo.jpeg" alt="Nimo Labs Logo" className="w-full h-full object-cover rounded-xl" />
+          </div>
           <h1 className="text-4xl font-bold text-white mb-2" style={syne}>
             Owner Login
           </h1>
