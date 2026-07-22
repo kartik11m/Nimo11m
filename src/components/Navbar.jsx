@@ -56,7 +56,7 @@ export default function Navbar() {
             Logout
           </button>
         ) : (
-          <Link to="/owner-login"
+          <Link to="/owner-login" state={{ fromInternalNav: true }}
             className="font-mono text-[10px] tracking-[3px] uppercase
               border border-[#FF6B35]/40 text-[#FF6B35] px-5 py-2.5 no-underline
               hover:bg-[#FF6B35] hover:text-bg transition-all duration-300">
