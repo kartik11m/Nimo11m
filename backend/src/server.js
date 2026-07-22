@@ -108,6 +108,18 @@ app.get('/health', (req, res) => {
   })
 })
 
+// ── Root + Favicon ───────────────────────────────────────────
+app.get('/favicon.ico', (req, res) => res.status(204).end())
+
+app.get('/', (req, res) => {
+  res.status(200).json({
+    success: true,
+    service: 'Nimo Labs Backend',
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV
+  })
+})
+
 // ── 404 Handler ───────────────────────────────────────────────
 app.use((req, res) => {
   res.status(404).json({ 
