@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { Link } from 'react-router-dom'
+import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import ScrollVideoSection1   from '../components/ScrollVideoSection1'
 import ScrollVideoSection2   from '../components/ScrollVideoSection2'
 import ScrollVideoSection3   from '../components/ScrollVideoSection3'
@@ -10,6 +11,12 @@ import AddChapterButton     from '../components/AddChapterButton'
 import EditableText         from '../components/EditableText'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+
+const DEFAULT_CHAPTERS = [
+  { chapterId: 'ch1', order: 1 },
+  { chapterId: 'ch2', order: 2 },
+  { chapterId: 'ch3', order: 3 },
+]
 
 const bebasNeue = { fontFamily: "'Bebas Neue', sans-serif" }
 const syne      = { fontFamily: "'Syne', sans-serif" }
@@ -124,7 +131,7 @@ const nimoPhotos = [
 
 
 export default function RobotsPage() {
-  const [chapters, setChapters] = useState([])
+  const [chapters, setChapters] = useState(DEFAULT_CHAPTERS)
   const [loading, setLoading] = useState(true)
 
   // Fetch chapters on mount
@@ -133,7 +140,7 @@ export default function RobotsPage() {
       try {
         const res = await fetch(`${API_URL}/chapters`)
         const data = await res.json()
-        if (data.success) {
+        if (data.success && data.chapters && data.chapters.length > 0) {
           setChapters(data.chapters.sort((a, b) => a.order - b.order))
         }
       } catch (error) {
@@ -144,6 +151,43 @@ export default function RobotsPage() {
     }
     fetchChapters()
   }, [])
+
+  // Recalculate ScrollTrigger positions as images, fonts, and DOM layout settle on page refresh
+  useEffect(() => {
+    const handleRefresh = () => {
+      ScrollTrigger.sort()
+      ScrollTrigger.refresh()
+    }
+
+    window.addEventListener('load', handleRefresh)
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(handleRefresh)
+    }
+
+    let resizeObserver
+    if (typeof ResizeObserver !== 'undefined') {
+      let timeoutId
+      resizeObserver = new ResizeObserver(() => {
+        clearTimeout(timeoutId)
+        timeoutId = setTimeout(handleRefresh, 100)
+      })
+      resizeObserver.observe(document.body)
+    }
+
+    const t1 = setTimeout(handleRefresh, 150)
+    const t2 = setTimeout(handleRefresh, 600)
+    const t3 = setTimeout(handleRefresh, 1500)
+    const t4 = setTimeout(handleRefresh, 3000)
+
+    return () => {
+      window.removeEventListener('load', handleRefresh)
+      if (resizeObserver) resizeObserver.disconnect()
+      clearTimeout(t1)
+      clearTimeout(t2)
+      clearTimeout(t3)
+      clearTimeout(t4)
+    }
+  }, [chapters])
 
   // Handle chapter deletion from UI
   const handleChapterDelete = useCallback((chapterId) => {
