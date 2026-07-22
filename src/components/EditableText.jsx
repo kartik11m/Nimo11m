@@ -183,13 +183,15 @@ export default function EditableText({ contentId, children, className = '', acce
     )
   }
 
+  const wrapperColor = hasGradient ? 'transparent' : textColor
+
   return (
     <span
       onClick={() => isOwner && setIsEditing(true)}
       className={`${isOwner ? 'cursor-pointer hover:bg-white/5 px-1 rounded transition-colors' : ''} ${className}`}
       style={{ 
         pointerEvents: 'auto',
-        color: textColor,
+        color: wrapperColor,
         ...style
       }}
       role="button"
