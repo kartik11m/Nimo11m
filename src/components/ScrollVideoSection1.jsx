@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import AnimatedTextCard from './AnimatedTextCard'
@@ -9,6 +9,23 @@ import { useOwnerAuth } from '../context/OwnerAuthContext'
 gsap.registerPlugin(ScrollTrigger)
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+const BACKEND_BASE_URL = API_URL.replace(/\/api\/?$/, '')
+const PUBLIC_BASE_URL = import.meta.env.BASE_URL || '/'
+const DEFAULT_VIDEO_URL = `${PUBLIC_BASE_URL}videos/nikki1.mp4`
+
+const normalizeVideoSrc = (src) => {
+  if (!src) return DEFAULT_VIDEO_URL
+  if (src.startsWith('data:') || src.startsWith('http://') || src.startsWith('https://')) {
+    return src
+  }
+  if (src.startsWith('/uploads/')) {
+    return `${BACKEND_BASE_URL}${src}`
+  }
+  if (src.startsWith('/')) {
+    return `${PUBLIC_BASE_URL}${src.slice(1)}`
+  }
+  return src
+}
 
 export default function ScrollVideoSection1() {
   const { isOwner } = useOwnerAuth()
@@ -24,7 +41,7 @@ export default function ScrollVideoSection1() {
   const [chapterLabel,  setChapterLabel]  = useState('Chapter One')
   const [autoplayEnabled, setAutoplayEnabled] = useState(false)
   const autoplayEnabledRef = useRef(false)
-  const [videoUrl, setVideoUrl] = useState('/videos/nikki1.mp4')
+  const [videoUrl, setVideoUrl] = useState(DEFAULT_VIDEO_URL)
   const [videoKey] = useState('section-1')
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' ? window.matchMedia('(max-width: 767px)').matches : false)
 
@@ -39,8 +56,11 @@ export default function ScrollVideoSection1() {
         const data = await res.json()
         if (data.success && data.videos && data.videos.length > 0) {
           const video = data.videos[0]
-          // Use base64 src data directly
-          setVideoUrl(video.src)
+          if (video?.src) {
+            setVideoUrl(normalizeVideoSrc(video.src))
+          } else {
+            console.warn('Fetch returned video metadata without src; keeping default video URL.')
+          }
         }
       } catch (error) {
         console.error('Error fetching video:', error)
@@ -50,12 +70,13 @@ export default function ScrollVideoSection1() {
   }, [videoKey])
 
   const handleVideoUploadSuccess = (video) => {
-    // Use base64 src data from uploaded video
-    setVideoUrl(video.src)
-    // Reset video player
+    const normalizedSrc = normalizeVideoSrc(video.src)
+    setVideoUrl(normalizedSrc)
     if (videoRef.current) {
-      videoRef.current.src = video.src
+      videoRef.current.pause()
+      videoRef.current.src = normalizedSrc
       videoRef.current.load()
+      videoRef.current.play().catch(() => {})
     }
   }
 
@@ -105,7 +126,7 @@ export default function ScrollVideoSection1() {
     }
   }, [])
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const cards = isMobile ? [cardRefs.current[0]] : cardRefs.current
 
     // ── Build GSAP timeline ──────────────────────────────────────
@@ -166,13 +187,33 @@ export default function ScrollVideoSection1() {
       end: isMobile ? '+=1400' : '+=2000',
       scrub: 1.2,
       pin: true,
+      pinType: 'fixed',
+      pinSpacing: true,
       anticipatePin: 1,
+      refreshPriority: 3,
+      // Ensure pinned section sits above later sections while active
+      onToggle(self) {
+        if (sectionRef.current) sectionRef.current.style.zIndex = self.isActive ? '100' : '0'
+      },
       onUpdate(self) {
         tl.progress(self.progress)
 
         const clipProgress = Math.min(Math.max(self.progress, 0), 1)
         videoTargetTime.current = clipProgress * videoDuration.current
+
+        const newChapter = Math.min(
+          Math.floor(self.progress * sections.length),
+          sections.length - 1,
+        )
+
+        setActiveChapter((current) => current === newChapter ? current : newChapter)
+        setChapterLabel(sections[newChapter]?.chapter || `Chapter ${newChapter + 1}`)
       },
+    })
+
+    ScrollTrigger.sort()
+    const refreshId = requestAnimationFrame(() => {
+      ScrollTrigger.refresh()
     })
 
     const animateVideo = () => {
@@ -194,6 +235,7 @@ export default function ScrollVideoSection1() {
 
     return () => {
       cancelAnimationFrame(videoFrame.current)
+      cancelAnimationFrame(refreshId)
       st.kill()
       tl.kill()
     }
@@ -209,13 +251,18 @@ export default function ScrollVideoSection1() {
         {!isMobile && (
           <div className="relative w-full md:w-[55%] h-[50vh] md:h-full flex-shrink-0 overflow-hidden">
             <video
-              key="desktop-video"
+              key={`desktop-video-${videoUrl}`}
               ref={videoRef}
               className="absolute inset-0 h-full w-full object-contain"
               src={videoUrl}
               muted
+              controls
+              loop
+              autoPlay
               playsInline
               preload="auto"
+              onLoadedData={() => console.log('Video loaded:', videoUrl)}
+              onError={(event) => console.error('Video load error:', videoUrl, event)}
             />
 
             {/* Gradient vignette — fades canvas edges into the bg */}
@@ -270,13 +317,18 @@ export default function ScrollVideoSection1() {
         <div className="w-full flex flex-col">
 <div className="w-full h-[44vh] sm:h-[48vh] overflow-hidden relative">
           <video
-            key="mobile-video"
+            key={`mobile-video-${videoUrl}`}
             ref={videoRef}
             className="absolute inset-0 h-full w-full "
             src={videoUrl}
             muted
+            controls
+            loop
+            autoPlay
             playsInline
             preload="auto"
+            onLoadedData={() => console.log('Video loaded:', videoUrl)}
+            onError={(event) => console.error('Video load error:', videoUrl, event)}
           />
           </div>
 
