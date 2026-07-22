@@ -1,17 +1,22 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useOwnerAuth } from '../context/OwnerAuthContext'
+import LoadingScreen from '../components/LoadingScreen'
 
 const syne = { fontFamily: "'Syne', sans-serif" }
 const dmSans = { fontFamily: "'DM Sans', sans-serif" }
 
 export default function OwnerLoginPage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { login } = useOwnerAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [showLoadingScreen, setShowLoadingScreen] = useState(
+    () => Boolean(location.state?.fromInternalNav)
+  )
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -26,6 +31,10 @@ export default function OwnerLoginPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  if (showLoadingScreen) {
+    return <LoadingScreen onComplete={() => setShowLoadingScreen(false)} />
   }
 
   return (
