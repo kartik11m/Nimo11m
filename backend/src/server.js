@@ -61,7 +61,14 @@ const initializeCourses = require('./utils/initializeCourses')
 const initializeEvents = require('./utils/initializeEvents')
 const initializeCards = require('./utils/initializeCards')
 
-connectDB()
+app.use(async (req, res, next) => {
+  try {
+    await connectDB()
+  } catch (err) {
+    console.error('DB middleware connection error:', err)
+  }
+  next()
+})
 
 // ── Initialize Owner Account ──────────────────────────────────
 setTimeout(() => {
