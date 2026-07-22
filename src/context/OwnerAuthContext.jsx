@@ -16,15 +16,76 @@ export function OwnerAuthProvider({ children }) {
   const [token, setToken] = useState(() => normalizeToken(localStorage.getItem('ownerToken')))
   const [loading, setLoading] = useState(true)
 
-  // Initialize from localStorage
-  useEffect(() => {
-    const storedToken = normalizeToken(localStorage.getItem('ownerToken'))
-    if (storedToken) {
-      setToken(storedToken)
-      setIsOwner(true)
+  const logout = () => {
+    setIsOwner(false)
+    setToken(null)
+    localStorage.removeItem('ownerToken')
+  }
+
+  const validateStoredToken = useCallback(async (storedToken) => {
+    if (!storedToken) return false
+
+    try {
+      const res = await fetch(`${API_URL}/owner/me`, {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${storedToken}`,
+        },
+      })
+
+      const data = await res.json()
+      return res.ok && data.success
+    } catch (error) {
+      console.error('Token validation failed:', error)
+      return false
     }
-    setLoading(false)
   }, [])
+
+  const handleResponse = useCallback(async (res) => {
+    let data
+    try {
+      data = await res.json()
+    } catch (err) {
+      // non-JSON response
+      if (res.status === 401) {
+        logout()
+        throw new Error('Invalid token')
+      }
+      throw new Error(res.statusText || 'Request failed')
+    }
+
+    if (res.status === 401) {
+      logout()
+      throw new Error(data.message || 'Invalid token')
+    }
+
+    if (!res.ok || !data.success) {
+      throw new Error(data.message || res.statusText || 'Request failed')
+    }
+
+    return data
+  }, [logout])
+
+  useEffect(() => {
+    const initializeAuth = async () => {
+      const storedToken = normalizeToken(localStorage.getItem('ownerToken'))
+      if (!storedToken) {
+        setLoading(false)
+        return
+      }
+
+      const valid = await validateStoredToken(storedToken)
+      if (valid) {
+        setToken(storedToken)
+        setIsOwner(true)
+      } else {
+        logout()
+      }
+      setLoading(false)
+    }
+
+    initializeAuth()
+  }, [validateStoredToken])
 
   const login = async (email, password) => {
     setLoading(true)
@@ -52,11 +113,6 @@ export function OwnerAuthProvider({ children }) {
     }
   }
 
-  const logout = () => {
-    setIsOwner(false)
-    setToken(null)
-    localStorage.removeItem('ownerToken')
-  }
 
   const updateContent = useCallback(async (contentId, content) => {
     try {
@@ -64,13 +120,12 @@ export function OwnerAuthProvider({ children }) {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({ content }),
       })
 
-      const data = await res.json()
-      if (!data.success) throw new Error(data.message)
+      const data = await handleResponse(res)
       return data
     } catch (error) {
       console.error('Update failed:', error)
@@ -84,8 +139,7 @@ export function OwnerAuthProvider({ children }) {
         headers: { 'Content-Type': 'application/json' },
       })
 
-      const data = await res.json()
-      if (!data.success) throw new Error(data.message)
+      const data = await handleResponse(res)
       return data.content || []
     } catch (error) {
       console.error('Fetch page content failed:', error)
@@ -104,8 +158,7 @@ export function OwnerAuthProvider({ children }) {
         body: JSON.stringify({ page, label, content: value }),
       })
 
-      const data = await res.json()
-      if (!data.success) throw new Error(data.message)
+      const data = await handleResponse(res)
       return data.content
     } catch (error) {
       console.error('Save page content failed:', error)
@@ -120,8 +173,7 @@ export function OwnerAuthProvider({ children }) {
         headers: { 'Content-Type': 'application/json' },
       })
 
-      const data = await res.json()
-      if (!data.success) throw new Error(data.message)
+      const data = await handleResponse(res)
       return data.data
     } catch (error) {
       console.error('Fetch cards failed:', error)
@@ -135,13 +187,12 @@ export function OwnerAuthProvider({ children }) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({ cardType, page, data: cardData }),
       })
 
-      const data = await res.json()
-      if (!data.success) throw new Error(data.message)
+      const data = await handleResponse(res)
       return data.data
     } catch (error) {
       console.error('Add card failed:', error)
@@ -155,13 +206,12 @@ export function OwnerAuthProvider({ children }) {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({ data: cardData }),
       })
 
-      const data = await res.json()
-      if (!data.success) throw new Error(data.message)
+      const data = await handleResponse(res)
       return data.data
     } catch (error) {
       console.error('Update card failed:', error)
@@ -175,12 +225,11 @@ export function OwnerAuthProvider({ children }) {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
       })
 
-      const data = await res.json()
-      if (!data.success) throw new Error(data.message)
+      const data = await handleResponse(res)
       return data
     } catch (error) {
       console.error('Delete card failed:', error)
@@ -194,13 +243,12 @@ export function OwnerAuthProvider({ children }) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({ cardType, page, cardIds }),
       })
 
-      const data = await res.json()
-      if (!data.success) throw new Error(data.message)
+      const data = await handleResponse(res)
       return data.data
     } catch (error) {
       console.error('Reorder cards failed:', error)
@@ -236,3 +284,5 @@ export function useOwnerAuth() {
   }
   return context
 }
+
+
