@@ -53,7 +53,7 @@ const sections = [
     title: 'Cookies',
     color: '#00F5FF', rgb: '0,245,255',
     items: [
-      { heading: 'Essential Cookies', body: 'We set a single session cookie (nimo_loaded) to manage the loading screen experience. This contains no personal data and expires when you close your browser.' },
+      { heading: 'Essential Cookies', body: 'We do not set any cookies for the loading screen. The load animation is rendered on every page refresh without saving any browsing state.' },
       { heading: 'Consent Cookie', body: 'We store your cookie consent preference (nimo_cookie_consent) in localStorage so we don\'t ask you again on every visit. This contains only your consent choice and timestamp.' },
       { heading: 'No Tracking Cookies', body: 'We do not set any advertising, tracking, or third-party cookies. Our analytics tool (Plausible) is cookieless.' },
     ],
