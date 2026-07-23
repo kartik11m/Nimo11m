@@ -61,6 +61,11 @@ const initializeCourses = require('./utils/initializeCourses')
 const initializeEvents = require('./utils/initializeEvents')
 const initializeCards = require('./utils/initializeCards')
 
+// ── Connect to MongoDB on startup (before middleware) ─────────
+connectDB().catch((err) => {
+  console.error('⚠️  MongoDB connection failed on startup:', err.message)
+})
+
 app.use(async (req, res, next) => {
   // Allow health check and root without blocking on DB
   if (req.path === '/' || req.path === '/health') {
